@@ -96,6 +96,14 @@ List<SettingsModel> get styleSettings => [
     defaultVal: false,
     needReboot: true,
   ),
+  const SwitchModel(
+    title: '横屏使用底部导航栏',
+    subtitle: '横屏及平板下保持底栏（未开启“改用侧边栏”时生效）',
+    leading: Icon(Icons.dock_outlined),
+    setKey: SettingBoxKey.useBottomNavInLandscape,
+    defaultVal: false,
+    needReboot: true,
+  ),
   NormalModel(
     title: 'App字体设置',
     subtitle: '点击设置',

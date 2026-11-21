@@ -810,7 +810,7 @@ abstract final class Pref {
 
   /// 横屏/平板下保持使用底部导航栏（启用原生 HDS 底栏时可获得沉浸光感）
   static bool get useBottomNavInLandscape =>
-      _setting.get(SettingBoxKey.useBottomNavInLandscape, defaultValue: true);
+      _setting.get(SettingBoxKey.useBottomNavInLandscape, defaultValue: false);
 
   /// 鸿蒙智感握姿：FAB 跟随握持手左右换边
   static bool get enableHoldingHandFab =>
