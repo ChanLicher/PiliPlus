@@ -6,6 +6,7 @@ abstract final class SettingBoxKey {
       showActualVolume = 'showActualVolume',
       enableHdsBar = 'enableHdsBar',
       enableHdsTopBar = 'enableHdsTopBar',
+      useBottomNavInLandscape = 'useBottomNavInLandscape',
       hdsTabMaterialLevel = 'hdsTabMaterialLevel',
       enableHeroCoverAnimation = 'enableHeroCoverAnimation',
       enableHoldingHandFab = 'enableHoldingHandFab';

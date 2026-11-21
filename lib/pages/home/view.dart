@@ -102,7 +102,7 @@ class _HomePageState extends CommonPageState<HomePage>
       children: [
         if (!useNativeTopBar &&
             !_mainController.useSideBar &&
-            MediaQuery.orientationOf(context) == Orientation.portrait)
+            _mainController.useBottomNav)
           customAppBar(theme)
         else if (!useNativeTopBar)
           SizedBox(height: MediaQuery.of(context).padding.top),

@@ -115,7 +115,9 @@ class _MainAppState extends PopScopeState<MainApp>
       }
     }
     if (!_mainController.useSideBar) {
-      _mainController.useBottomNav = MediaQuery.sizeOf(context).isPortrait;
+      _mainController.useBottomNav =
+          _mainController.useBottomNavInLandscape ||
+          MediaQuery.sizeOf(context).isPortrait;
     }
     // 横竖屏切换时同步原生 HDS 沉浸底栏/顶栏显隐
     // 由 ShellBarsObserver 统一管理，避免与路由观察者冲突。
