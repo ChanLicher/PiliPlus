@@ -15,7 +15,9 @@ abstract final class SettingBoxKey {
       useBottomNavInLandscape = 'useBottomNavInLandscape',
       hdsTabMaterialLevel = 'hdsTabMaterialLevel',
       enableHeroCoverAnimation = 'enableHeroCoverAnimation',
-      enableHoldingHandFab = 'enableHoldingHandFab';
+      enableHoldingHandFab = 'enableHoldingHandFab',
+      // 鸿蒙「横屏适配模式」：自适应 / 强制启用 / 强制禁用
+      harmonyHorizontalLayoutMode = 'harmonyHorizontalLayoutMode';
 
   static const String btmProgressBehavior = 'btmProgressBehavior',
       defaultVideoQa = 'defaultVideoQa',

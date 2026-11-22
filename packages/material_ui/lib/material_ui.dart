@@ -14,6 +14,26 @@ export 'package:flutter/material.dart'
         TranslateAnimationSource,
         SelectionArea,
         SelectionAreaState,
+        // 改由 src/selection_adaptive_toolbar.dart 提供同名实现（构造签名一致）：
+        // 还原成上游菜单写法后，在这里补「分享」按钮并换成鸿蒙样式工具栏。
+        AdaptiveTextSelectionToolbar,
+        // 以下改由 compat/ 提供同名实现（构造签名一致），把自适应水波纹注入
+        // 到 SDK 内部控件所在的子树：
+        //   Material/Scaffold → 外层套一层只改 splashFactory 的 Theme
+        //   InkWell/InkResponse → 取 factory 时走 resolveSplashFactory
+        Material,
+        Scaffold,
+        InkWell,
+        InkResponse,
+        // 业务侧 Theme(data: 自建 ThemeData) 会把 splashFactory 重置回
+        // InkRipple，这里一并接管。
+        Theme,
+        AnimatedTheme,
+        // 改由 src/compat/text.dart 提供同名实现：内部用 compat RichText
+        // （compat RenderParagraph）渲染，选中高亮高度才能对齐 SDK 的
+        // RenderEditable；否则 SelectionArea 会走 SDK RenderParagraph 的 tight 框，
+        // 高亮比还原前的 SelectableText 矮一截。
+        Text,
         // 这三个类改由 src/selection_widgets.dart 提供同名实现，构造签名与 SDK
         // 一致但不改 SDK 就让鸿蒙用上「杆 + 球」手柄。
         SelectableText,
@@ -49,6 +69,17 @@ export 'src/selection_edge_clamp.dart';
 export 'src/selection_menu.dart';
 export 'src/selection_handle.dart';
 
+// 上游 `SelectableRegionStateExt`（`lib/utils/extension/selectable_region_ext.dart`）
+// 的等价实现，单独从 package:material_ui/selection_region_ext.dart 导出（不在这里
+// 再转一次），让 app 侧那个文件的 import 与上游一样是必要的。
+//
+// SDK `AdaptiveTextSelectionToolbar` 的同名兼容实现：补「分享」按钮，并在
+// SelectionArea 路径下换成鸿蒙样式工具栏（见 src/selection_adaptive_toolbar.dart）。
+export 'src/selection_adaptive_toolbar.dart';
+
+// 选区变化时的触感反馈：按「手是否按着」判定，与手指是否在文字/手柄上无关。
+export 'src/selection_haptics.dart';
+
 // 鸿蒙文本选择体系的真实主题值（手柄/光标/选中高亮/工具栏/放大镜），
 // 取自 openharmony/global_system_resources 的主题 json，来源见文件头注释。
 export 'src/ohos_selection_theme.dart';
@@ -70,7 +101,18 @@ export 'src/selection_widgets.dart';
 // 平台判断与带业务语义的 physics 仍留在 app 侧（scroll_physics.dart）。
 export 'src/arkui_scroll_physics.dart';
 
+// 自适应水波纹（Android 12 InkSparkle 的复刻）。只在「通用默认」被选中时
+// 接管，业务显式选的 InkSparkle/NoSplash 保持原样；shader 未就绪时自动降级
+// 为纯 Canvas 圆。
+export 'src/ripple/adaptive_ink_ripple.dart' show AdaptiveInkRipple;
+export 'src/ripple/splash_policy.dart'
+    show isRippleTarget, kAdaptiveSplashFactory, resolveSplashFactory, withRippleSplash;
+
 // SDK 补丁的等价实现（lib/scripts/*.patch），文件结构与上游 lib/scripts 对应。
+export 'src/compat/material.dart' show Material;
+export 'src/compat/scaffold.dart' show Scaffold;
+export 'src/compat/ink_well.dart' show InkWell, InkResponse;
+export 'src/compat/theme.dart' show AnimatedTheme, Theme;
 export 'src/compat/navigation_drawer.dart';
 export 'src/compat/page_view.dart';
 export 'src/compat/scrollable.dart'
@@ -85,6 +127,7 @@ export 'src/compat/tabs.dart';
 export 'src/compat/draggable_scrollable_sheet.dart' hide DraggableScrollableController;
 export 'src/compat/paragraph.dart';
 export 'src/compat/rich_text.dart';
+export 'src/compat/text.dart' show Text;
 export 'src/compat/bottom_sheet.dart'
     show
         BottomSheet,

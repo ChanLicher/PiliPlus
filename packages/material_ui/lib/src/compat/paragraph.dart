@@ -86,7 +86,7 @@ class RenderParagraph extends RenderBox
     List<RenderBox>? children,
     Color? selectionColor,
     SelectionRegistrar? registrar,
-    required Color primary,
+    Color? primary,
     VoidCallback? onShowMore,
   }) : assert(text.debugAssertIsValid()),
        assert(maxLines == null || maxLines > 0),
@@ -157,7 +157,7 @@ class RenderParagraph extends RenderBox
   /// The text to display.
   InlineSpan get text => _textPainter.text!;
   // ↓↓↓ 适配flutter 3.32.4-ohos-0.0.1
-  set setText(({InlineSpan text, Color primary}) params) {
+  set setText(({InlineSpan text, Color? primary}) params) {
     final value = params.text;
     _primary = params.primary;
     if (_morePainter case final textPainter?) {
@@ -726,7 +726,7 @@ class RenderParagraph extends RenderBox
     );
   }
 
-  Color _primary;
+  Color? _primary;
 
   VoidCallback? _onShowMore;
   set onShowMore(VoidCallback? onShowMore) {
@@ -739,7 +739,8 @@ class RenderParagraph extends RenderBox
   TapGestureRecognizer? _tapGestureRecognizer;
 
   TextSpan _moreTextSpan([TextStyle? style]) => TextSpan(
-    style: (style ?? text.style!).copyWith(color: _primary),
+    // shim 的 Text 不传 primary（通用文本没有主题色），退回文本自身颜色。
+    style: (style ?? text.style!).copyWith(color: _primary ?? style?.color),
     text: '查看更多',
     recognizer: _tapGestureRecognizer,
   );
@@ -767,10 +768,10 @@ class RenderParagraph extends RenderBox
     didOverflowHeight =
         size.height < textSize.height || _textPainter.didExceedMaxLines;
 
-    if (didOverflowHeight) {
-      if (_onShowMore != null) {
-        _tapGestureRecognizer ??= TapGestureRecognizer()..onTap = _onShowMore;
-      }
+    // 只有调用方提供了「查看更多」回调才补这一行：shim 接管后的通用 Text
+    // 在 maxLines 溢出时应当保持 SDK 的省略行为，不能凭空多出「查看更多」。
+    if (didOverflowHeight && _onShowMore != null) {
+      _tapGestureRecognizer ??= TapGestureRecognizer()..onTap = _onShowMore;
       _morePainter ??= TextPainter(
         text: _moreTextSpan(),
         textDirection: textDirection,
@@ -894,7 +895,7 @@ class RenderParagraph extends RenderBox
       context.canvas.restore();
     }
 
-    if (didOverflowHeight) {
+    if (didOverflowHeight && _onShowMore != null) {
       _morePainter?.paint(
         context.canvas,
         offset + Offset(0, _textPainter.height),
@@ -1409,14 +1410,16 @@ class _SelectableFragment
     final int selectionStart = _textSelectionStart!.offset;
     final int selectionEnd = _textSelectionEnd!.offset;
     final bool isReversed = selectionStart > selectionEnd;
-    final Offset startOffsetInParagraphCoordinates = paragraph
-        ._getOffsetForPosition(
-          TextPosition(offset: selectionStart),
-        );
+    // 与 SDK 的差别（见下方 _selectionPointAt）：这里必须用存下来的
+    // [TextPosition]（带 affinity），重建 offset 会丢掉换行处的 upstream/downstream，
+    // 止手柄会从「上一行行尾」跳到「下一行行首」。
+    final Offset startOffsetInParagraphCoordinates = _selectionPointAt(
+      _textSelectionStart!,
+    );
     final Offset endOffsetInParagraphCoordinates =
         selectionStart == selectionEnd
         ? startOffsetInParagraphCoordinates
-        : paragraph._getOffsetForPosition(TextPosition(offset: selectionEnd));
+        : _selectionPointAt(_textSelectionEnd!);
     final bool flipHandles =
         isReversed != (TextDirection.rtl == paragraph.textDirection);
     final TextSelection selection = TextSelection(
@@ -1463,6 +1466,35 @@ class _SelectableFragment
           : SelectionStatus.uncollapsed,
       hasContent: true,
     );
+  }
+
+  /// 选区端点（手柄锚点）在段落内的局部坐标。
+  ///
+  /// SDK 直接用 `_getOffsetForPosition`（= caret 顶部 + 行高），得到的是
+  /// [ui.BoxHeightStyle.max] 意义下的行边界；但本 shim 的选中高亮按
+  /// [ui.BoxHeightStyle.includeLineSpacingMiddle] 的行框绘制（对齐 SelectableText/
+  /// 输入框）。两者在行距 > 1 时相差半个行距：高亮到 29.8，手柄锚点在 27.0，
+  /// 于是非最后一行的左右手柄都会「偏上」；最后一行两者相等，看起来正常。
+  ///
+  /// 这里按 caret 的 y 找到同一行、取 includeLineSpacingMiddle 行框的下沿，
+  /// 让手柄锚点与高亮下沿重合（与 RenderEditable 的
+  /// `getEndpointsForSelection` 行为一致）。
+  Offset _selectionPointAt(TextPosition position) {
+    final Offset caret = paragraph._getOffsetForPosition(position);
+    final String plainText = paragraph.text.toPlainText();
+    if (plainText.isEmpty) {
+      return caret;
+    }
+    final List<TextBox> boxes = paragraph.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: plainText.length),
+      boxHeightStyle: ui.BoxHeightStyle.includeLineSpacingMiddle,
+    );
+    for (final TextBox box in boxes) {
+      if (box.bottom >= caret.dy - 0.5) {
+        return Offset(caret.dx, box.bottom);
+      }
+    }
+    return caret;
   }
 
   @override
@@ -1896,9 +1928,10 @@ class _SelectableFragment
       direction: paragraph.textDirection,
     );
 
-    final TextPosition position = _clampTextPosition(
+    TextPosition position = _clampTextPosition(
       paragraph.getPositionForOffset(adjustedOffset),
     );
+    position = _normalizeBoundaryAffinity(position, isEnd: isEnd);
     _setSelectionPosition(position, isEnd: isEnd);
     if (position.offset == range.end) {
       return SelectionResult.next;
@@ -1911,6 +1944,38 @@ class _SelectableFragment
     // not have a way to get accurate text length if its text is truncated due to
     // layout constraint.
     return SelectionUtils.getResultBasedOnRect(_rect, localPosition);
+  }
+
+  /// 行边界处的端点按原生习惯落位。
+  ///
+  /// 拖手柄时 `getPositionForOffset` 在换行处可能返回「下一行行首」
+  /// （downstream）：止手柄看起来就停在一行**什么都没选中**的行首上；起手柄同理
+  /// 会停在上一行行尾。这里按端点角色固定 affinity：
+  ///
+  /// - 止端（isEnd）贴上一行行尾（upstream）；
+  /// - 起端贴下一行行首（downstream）。
+  ///
+  /// 两端仍然可以交换（反向选区），只是可视化位置落在真正的选区边界上。
+  TextPosition _normalizeBoundaryAffinity(
+    TextPosition position, {
+    required bool isEnd,
+  }) {
+    final Offset downstream = paragraph._getOffsetForPosition(
+      TextPosition(offset: position.offset),
+    );
+    final Offset upstream = paragraph._getOffsetForPosition(
+      TextPosition(offset: position.offset, affinity: TextAffinity.upstream),
+    );
+    if (downstream == upstream) {
+      // 不在行边界：affinity 不影响落点，保持引擎给的值。
+      return position;
+    }
+    return isEnd
+        ? TextPosition(offset: position.offset, affinity: TextAffinity.upstream)
+        : TextPosition(
+            offset: position.offset,
+            affinity: TextAffinity.downstream,
+          );
   }
 
   // This method handles updating the start edge by a text boundary that may
@@ -3800,7 +3865,13 @@ class _SelectableFragment
       final Paint selectionPaint = Paint()
         ..style = PaintingStyle.fill
         ..color = paragraph.selectionColor!;
-      for (final TextBox textBox in paragraph.getBoxesForSelection(selection)) {
+      // 与 `EditableText.defaultSelectionHeightStyle`（native 上为
+      // `includeLineSpacingMiddle`）保持一致：SDK 的 RenderParagraph 用 tight，
+      // 高亮会比 SelectableText/输入框矮一截。见文件头与 shim 的 Text。
+      for (final TextBox textBox in paragraph.getBoxesForSelection(
+        selection,
+        boxHeightStyle: ui.BoxHeightStyle.includeLineSpacingMiddle,
+      )) {
         context.canvas.drawRect(textBox.toRect().shift(offset), selectionPaint);
       }
     }
