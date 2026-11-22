@@ -794,7 +794,7 @@ class VideoDetailController extends GetxController
   void _refreshSourceUrls(VideoQuality currentVideoQa) {
     firstVideo = findVideoByQa(currentVideoQa.code, setCodecs: true);
     videoUrl = VideoUtils.getCdnUrl(firstVideo.playUrls);
-    videoCandidates = firstVideo.playUrls;
+    videoCandidates = firstVideo.playUrls.toList();
 
     /// 根据currentAudioQa 重新设置audioUrl
     if (currentAudioQa != null) {
@@ -803,7 +803,7 @@ class VideoDetailController extends GetxController
         orElse: () => data.dash!.audio!.first,
       );
       audioUrl = VideoUtils.getCdnUrl(firstAudio.playUrls, isAudio: true);
-      audioCandidates = firstAudio.playUrls;
+      audioCandidates = firstAudio.playUrls.toList();
     } else {
       audioCandidates = null;
     }
@@ -1155,7 +1155,7 @@ class VideoDetailController extends GetxController
       currentVideoQa.value = VideoQuality.fromCode(targetQuality);
       _setVideoHeight();
       videoUrl = VideoUtils.getCdnUrl(firstVideo.playUrls);
-      videoCandidates = firstVideo.playUrls;
+      videoCandidates = firstVideo.playUrls.toList();
 
       AudioItem? firstAudio;
       final audioList = dash.audio;
@@ -1165,7 +1165,7 @@ class VideoDetailController extends GetxController
           plPlayerController.cacheAudioQa,
         );
         audioUrl = VideoUtils.getCdnUrl(firstAudio.playUrls, isAudio: true);
-        audioCandidates = firstAudio.playUrls;
+        audioCandidates = firstAudio.playUrls.toList();
         currentAudioQa = AudioQuality.fromCode(firstAudio.id);
       } else {
         audioUrl = '';
