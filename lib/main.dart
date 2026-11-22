@@ -112,6 +112,15 @@ Future<void> _initAppPath() async {
 
 void main() async {
   ScaledWidgetsFlutterBinding.ensureInitialized();
+  LicenseRegistry.addLicense(() async* {
+    final license = await rootBundle.loadString(
+      'docs/licenses/bilibili-thread-ripper.txt',
+    );
+    yield LicenseEntryWithLineBreaks(
+      const ['Bilibili-thread-ripper'],
+      license,
+    );
+  });
   MediaKit.ensureInitialized();
   if (OS.isHarmony) await OS.initHarmonyDeviceType();
   await _initAppPath();

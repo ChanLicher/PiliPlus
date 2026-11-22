@@ -147,6 +147,8 @@ class VideoDetailController extends GetxController
   late VideoItem firstVideo;
   String? videoUrl;
   String? audioUrl;
+  List<String>? videoCandidates;
+  List<String>? audioCandidates;
   Duration? defaultST;
   Duration? playedTime;
   String playedTimePos(bool hasParams) {
@@ -792,6 +794,7 @@ class VideoDetailController extends GetxController
   void _refreshSourceUrls(VideoQuality currentVideoQa) {
     firstVideo = findVideoByQa(currentVideoQa.code, setCodecs: true);
     videoUrl = VideoUtils.getCdnUrl(firstVideo.playUrls);
+    videoCandidates = firstVideo.playUrls;
 
     /// 根据currentAudioQa 重新设置audioUrl
     if (currentAudioQa != null) {
@@ -800,6 +803,9 @@ class VideoDetailController extends GetxController
         orElse: () => data.dash!.audio!.first,
       );
       audioUrl = VideoUtils.getCdnUrl(firstAudio.playUrls, isAudio: true);
+      audioCandidates = firstAudio.playUrls;
+    } else {
+      audioCandidates = null;
     }
   }
 
@@ -885,6 +891,10 @@ class VideoDetailController extends GetxController
     return null;
   }
 
+  bool get _ripperEpisodeAllowed =>
+      isUgc ||
+      (Pref.threadRipperEpisodeEnabled && !data.isDrm && !data.isPreview);
+
   Future<void> playerInit({
     bool? autoplay,
     bool autoFullScreenFlag = false,
@@ -893,6 +903,7 @@ class VideoDetailController extends GetxController
     Duration? seek = defaultST ?? playedTime;
     if (seek == .zero) seek = null;
     seek ??= getFirstSegment();
+    final ripperAllowed = _ripperEpisodeAllowed;
     await plPlayerController.setDataSource(
       isFileSource
           ? FileSource(
@@ -904,6 +915,8 @@ class VideoDetailController extends GetxController
           : NetworkSource(
               videoSource: videoUrl!,
               audioSource: audioUrl,
+              videoCandidates: ripperAllowed ? videoCandidates : null,
+              audioCandidates: ripperAllowed ? audioCandidates : null,
             ),
       seekTo: seek,
       duration: data.timeLength == null
@@ -1142,6 +1155,7 @@ class VideoDetailController extends GetxController
       currentVideoQa.value = VideoQuality.fromCode(targetQuality);
       _setVideoHeight();
       videoUrl = VideoUtils.getCdnUrl(firstVideo.playUrls);
+      videoCandidates = firstVideo.playUrls;
 
       AudioItem? firstAudio;
       final audioList = dash.audio;
@@ -1151,9 +1165,11 @@ class VideoDetailController extends GetxController
           plPlayerController.cacheAudioQa,
         );
         audioUrl = VideoUtils.getCdnUrl(firstAudio.playUrls, isAudio: true);
+        audioCandidates = firstAudio.playUrls;
         currentAudioQa = AudioQuality.fromCode(firstAudio.id);
       } else {
         audioUrl = '';
+        audioCandidates = null;
       }
       await initPlayerIfNeeded(autoFullScreenFlag);
     } else {

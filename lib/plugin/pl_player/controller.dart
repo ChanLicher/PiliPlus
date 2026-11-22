@@ -38,6 +38,8 @@ import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/player_rebuild_queue.dart';
 import 'package:PiliPlus/services/service_locator.dart';
+import 'package:PiliPlus/services/thread_ripper/auto_concurrency.dart';
+import 'package:PiliPlus/services/thread_ripper/range_proxy.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/android/bindings.g.dart';
 import 'package:PiliPlus/utils/asset_utils.dart';
@@ -83,6 +85,13 @@ typedef PlayOwner = ({String tag, Type? type});
 
 class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   Player? _videoPlayerController;
+  RipperRangeProxy? _ripperProxy;
+  RipperAutoConcurrency? _ripperAutoConcurrency;
+
+  void _closeRipperProxy() {
+    _ripperProxy?.close();
+    _ripperProxy = null;
+  }
 
   /// 播放器控制器。用 Rx 承载而不是普通字段：它的创建/释放都发生在异步链路
   /// 里（换源、初始化失败、退后台清内存），与页面「可以开始播放」的时机并不同
@@ -1012,6 +1021,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       await _createVideoController(dataSource, seekTo, volume);
 
       if (_playerCount == 0) {
+        _closeRipperProxy();
         _removeListeners();
         await _disposePlayerSafely(_videoPlayerController);
         _videoPlayerController = null;
@@ -1212,7 +1222,58 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     }
 
     String video = dataSource.videoSource;
-    if (dataSource.audioSource case final audio? when (audio.isNotEmpty)) {
+    String? audioSource = dataSource.audioSource;
+    _closeRipperProxy();
+    if (!isLive &&
+        Pref.threadRipperEnabled &&
+        dataSource is NetworkSource &&
+        dataSource.videoCandidates != null &&
+        dataSource.videoCandidates!.isNotEmpty) {
+      final autoConcurrency = Pref.threadRipperAutoConcurrency
+          ? (_ripperAutoConcurrency ??= RipperAutoConcurrency())
+          : null;
+      final proxy = RipperRangeProxy(
+        concurrency: Pref.threadRipperConcurrency,
+        overseas: Pref.threadRipperOverseas,
+        customHosts: Pref.threadRipperCustomHosts,
+        autoConcurrency: autoConcurrency,
+        userAgent: BrowserUa.pc,
+        referer: HttpString.baseUrl,
+      );
+      try {
+        await proxy.start();
+        if (_playerCount == 0) {
+          proxy.close();
+          return;
+        }
+        final proxiedVideo = proxy.register(dataSource.videoCandidates!);
+        String? proxiedAudio = audioSource;
+        if (audioSource != null && audioSource.isNotEmpty) {
+          final audioCandidates = dataSource.audioCandidates;
+          if (audioCandidates != null && audioCandidates.isNotEmpty) {
+            try {
+              proxiedAudio = proxy.register(
+                audioCandidates,
+                isAudio: true,
+              );
+            } catch (e) {
+              if (kDebugMode) {
+                debugPrint('[ThreadRipper] audio register fallback: $e');
+              }
+            }
+          }
+        }
+        _ripperProxy = proxy;
+        video = proxiedVideo;
+        audioSource = proxiedAudio;
+      } catch (e) {
+        proxy.close();
+        if (kDebugMode) {
+          debugPrint('[ThreadRipper] fallback to direct URL: $e');
+        }
+      }
+    }
+    if (audioSource case final audio? when (audio.isNotEmpty)) {
       if (onlyPlayAudio.value) {
         video = audio;
       } else {
@@ -1265,6 +1326,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     }
     String? audioUri;
     if (!isLive) {
+      _closeRipperProxy();
       if (dataSource.audioSource.isNullOrEmpty) {
         SmartDialog.showToast('音频源为空');
       } else {
@@ -1285,6 +1347,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     await _videoPlayerController!.open(
       Media(
         dataSource.videoSource,
+        httpHeaders: {
+          'user-agent': BrowserUa.pc,
+          'referer': HttpString.baseUrl,
+        },
         start: isLive ? null : Duration(milliseconds: positionInMilliseconds),
         extras: audioUri == null ? null : {'audio-files': '"$audioUri"'},
       ),
@@ -1474,9 +1540,18 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       }),
       stream.buffer.listen((Duration buffer) {
         buffered.value = buffer.inSeconds;
+        final ahead =
+            (buffer.inMilliseconds - positionInMilliseconds) / 1000.0;
+        _ripperProxy?.autoConcurrency?.buffer(
+          ahead < 0 ? 0 : ahead,
+          playerStatus.isPlaying,
+        );
       }),
       stream.buffering.listen((bool buffering) {
         isBuffering.value = buffering;
+        if (buffering && playerStatus.isPlaying) {
+          _ripperProxy?.autoConcurrency?.stall();
+        }
         if (!playerStatus.isCompleted) {
           _stopWakeLockTimer();
           _updatePlaybackState();
@@ -1504,7 +1579,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
           return;
         }
         if (event.startsWith("Failed to open https://") ||
+            event.startsWith("Failed to open http://127.0.0.1:") ||
             event.startsWith("Can not open external file https://") ||
+            event.startsWith("Can not open external file http://127.0.0.1:") ||
             //tcp: ffurl_read returned 0xdfb9b0bb
             //tcp: ffurl_read returned 0xffffff99
             event.startsWith('tcp: ffurl_read returned ')) {
@@ -2383,6 +2460,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
         );
       }
     }
+    _closeRipperProxy();
+    _ripperAutoConcurrency = null;
     await _disposePlayerSafely(_videoPlayerController);
     _videoPlayerController = null;
     _videoControllerNotifier.value = null;
