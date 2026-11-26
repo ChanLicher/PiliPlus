@@ -24,6 +24,9 @@ const BOTTOM_NORMAL_AVOID_AREA_VALUE = 1;
 const BOTTOM_SPECIAL_AVOID_AREA_VALUE = 12;
 const TOP_BAR_BLUR_RADIUS = 25;
 const TOP_BAR_FRACTION_STOPS: [number, number][] = [[0, 0], [0.92, 0.1], [1, 1]];
+const BOTTOM_BAR_BLUR_RADIUS = 25;
+const BOTTOM_BAR_FRACTION_STOPS: [number, number][] = [[0, 0], [0.55, 0.35], [1, 1]];
+const BOTTOM_BAR_MASK_EXTRA_HEIGHT = 48;
 const TOP_BAR_COLLAPSED_HEIGHT = 80;
 const TOP_BAR_EXPANDED_HEIGHT = 144;
 /// 顶栏收缩曲线：重减速的三次贝塞尔，起步轻、尾段长距离滑停，
@@ -918,6 +921,35 @@ struct Index {
     }
   }
 
+  /// 底部沉浸光感栏衬底：渐进模糊 + 主题自适应渐变遮罩，
+  /// 压柔底部视频封面杂色以提升悬浮胶囊可见度，不拦截触摸且随底栏同步显隐。
+  @Builder
+  hdsBottomBarMask() {
+    Column()
+      .width('100%')
+      .height(56 + this.bottomAvoidAreaHeight + BOTTOM_BAR_MASK_EXTRA_HEIGHT)
+      .linearGradient({
+        direction: GradientDirection.Top,
+        colors: [
+          [$r('app.color.top_bar_mask_start'), 0],
+          [$r('app.color.top_bar_mask_mid'), 0.65],
+          [$r('app.color.top_bar_mask_end'), 0.95],
+          [$r('app.color.top_bar_mask_end'), 1],
+        ],
+      })
+      .linearGradientBlur(BOTTOM_BAR_BLUR_RADIUS, {
+        fractionStops: BOTTOM_BAR_FRACTION_STOPS,
+        direction: GradientDirection.Bottom
+      })
+      .opacity(this.shellBarsScrollHidden ? 0 : 1)
+      .animation({ duration: 200, curve: Curve.EaseOut })
+      .visibility(this.navTabs.length <= 1 || this.shellBarsHidden
+        ? Visibility.None
+        : Visibility.Visible)
+      .align(Alignment.Bottom)
+      .hitTestBehavior(HitTestMode.None)
+  }
+
   @Builder
   hdsMainTabs() {
     HdsTabs({ controller: this.controller }) {
@@ -939,7 +971,7 @@ struct Index {
     .barFloatingStyle({
       barBottomMargin: this.bottomAvoidAreaHeight,
       adaptToHandedness: true,
-      gradientMask: { maskColor: this.getBackgroundColor() },
+      gradientMask: { maskColor: this.getBackgroundColor(), maskHeight: 96 },
       systemMaterialEffect: {
         materialType: hdsMaterial.MaterialType.IMMERSIVE,
         materialLevel: this.resolveMaterialLevel()
@@ -960,6 +992,7 @@ struct Index {
         .height('100%')
         .align(Alignment.Top)
       if (this.useNativeTabs && deviceInfo.sdkApiVersion >= 23) {
+        this.hdsBottomBarMask()
         this.hdsMainTabs()
       }
       // API 26+：Navigation 标题栏 + ArkUI systemMaterial（全部元素带材质）
