@@ -54,6 +54,7 @@ class _VideoCardVState extends State<VideoCardV>
   late final Animation<double> _fadeAnim;
   late final Animation<double> _scaleAnim;
   final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
 
   BaseRcmdVideoItemModel get videoItem => widget.videoItem;
   VoidCallback? get onRemove => widget.onRemove;
@@ -95,6 +96,7 @@ class _VideoCardVState extends State<VideoCardV>
   void dispose() {
     _enterController.dispose();
     _pressed.dispose();
+    _hovered.dispose();
     super.dispose();
   }
 
@@ -114,6 +116,7 @@ class _VideoCardVState extends State<VideoCardV>
     }
     if (itemChanged) {
       _pressed.value = false;
+      _hovered.value = false;
       _enterController.forward(from: 0);
     }
   }
@@ -243,14 +246,30 @@ class _VideoCardVState extends State<VideoCardV>
       opacity: _fadeAnim,
       child: ScaleTransition(
         scale: _scaleAnim,
-        child: ValueListenableBuilder<bool>(
-          valueListenable: _pressed,
-          child: contentStack,
-          builder: (_, pressed, child) => AnimatedScale(
-            scale: pressed ? 0.965 : 1.0,
-            duration: Duration(milliseconds: pressed ? 110 : 220),
-            curve: pressed ? Curves.easeOutCubic : Curves.easeOutBack,
-            child: child,
+        child: MouseRegion(
+          onEnter: (_) => _hovered.value = true,
+          onExit: (_) => _hovered.value = false,
+          child: ListenableBuilder(
+            listenable: Listenable.merge([_pressed, _hovered]),
+            child: contentStack,
+            builder: (_, child) {
+              final pressed = _pressed.value;
+              final hovered = _hovered.value;
+              final targetScale = pressed ? 0.965 : (hovered ? 1.028 : 1.0);
+              return AnimatedSlide(
+                offset: (!pressed && hovered)
+                    ? const Offset(0, -0.012)
+                    : Offset.zero,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: AnimatedScale(
+                  scale: targetScale,
+                  duration: Duration(milliseconds: pressed ? 110 : 200),
+                  curve: pressed ? Curves.easeOutCubic : Curves.easeOutBack,
+                  child: child,
+                ),
+              );
+            },
           ),
         ),
       ),

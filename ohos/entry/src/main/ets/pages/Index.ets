@@ -29,9 +29,12 @@ const BOTTOM_BAR_FRACTION_STOPS: [number, number][] = [[0, 0], [0.55, 0.35], [1,
 const BOTTOM_BAR_MASK_EXTRA_HEIGHT = 48;
 const TOP_BAR_COLLAPSED_HEIGHT = 80;
 const TOP_BAR_EXPANDED_HEIGHT = 144;
-const TOP_BAR_WIDE_EXPANDED_HEIGHT = 104;
+const TOP_BAR_WIDE_EXPANDED_HEIGHT = 116;
 const WIDE_TOP_BAR_MIN_WIDTH = 600;
-const WIDE_SEARCH_BAR_WIDTH = 200;
+const WIDE_SEARCH_BAR_WIDTH = 220;
+const WIDE_TOP_ITEM_HEIGHT = 56;
+const TOP_BAR_MASK_EXTRA_HEIGHT = 36;
+const HOVER_BG_COLOR = '#24888888';
 /// 顶栏收缩曲线：重减速的三次贝塞尔，起步轻、尾段长距离滑停，
 /// 比对称的 EaseInOut 柔和。裁剪容器/内容容器/搜索行三处高度共用同一条
 /// 曲线与时长，避免各自为政导致的错位；数值需与 Flutter 侧
@@ -159,6 +162,9 @@ struct Index {
   @State winWidth: number = 0;
   @State winHeight: number = 0;
   @State bottomAvoidAreaHeight: number = 0;
+  @State hoveredNavIndex: number = -1;
+  @State hoveredCatIndex: number = -1;
+  @State hoveredTopAction: string = '';
 
   private categoryController: TabsController = new TabsController();
   private controller: HdsTabsController = new HdsTabsController();
@@ -195,13 +201,13 @@ struct Index {
   }
 
   private wideSearchWidth(): number {
-    return this.winWidth >= 880 ? WIDE_SEARCH_BAR_WIDTH : 156;
+    return this.winWidth >= 960 ? WIDE_SEARCH_BAR_WIDTH : 168;
   }
 
   /// 宽屏单行时判断屏幕正居中放置分类胶囊是否与右侧搜索/通知/头像区冲突
   private canTrueCenterWideTopBar(): boolean {
-    const capsuleWidth = this.homeTabs.length * 46 + 16;
-    const rightWidth = this.wideSearchWidth() + 104 + this.titleButtonInset + 14;
+    const capsuleWidth = this.homeTabs.length * 58 + 16;
+    const rightWidth = this.wideSearchWidth() + WIDE_TOP_ITEM_HEIGHT * 2 + 24 + this.titleButtonInset + 14;
     return (this.winWidth - capsuleWidth) / 2 >= rightWidth + 12;
   }
 
@@ -522,11 +528,23 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .borderRadius(24)
+    .backgroundColor(this.hoveredNavIndex === index ? HOVER_BG_COLOR : Color.Transparent)
+    .scale(this.hoveredNavIndex === index ? { x: 1.06, y: 1.06 } : { x: 1, y: 1 })
+    .animation({ duration: 150, curve: Curve.EaseOut })
     .justifyContent(FlexAlign.Center)
+    .hoverEffect(HoverEffect.Highlight)
+    .onHover((isHover: boolean) => {
+      if (isHover) {
+        this.hoveredNavIndex = index;
+      } else if (this.hoveredNavIndex === index) {
+        this.hoveredNavIndex = -1;
+      }
+    })
   }
 
   @Builder
-  circleIconButton(icon: Resource, size: number, iconSize: number, onClick: () => void) {
+  circleIconButton(icon: Resource, size: number, iconSize: number, hoverKey: string, onClick: () => void) {
     Stack() {
       SymbolGlyph(icon)
         .fontSize(iconSize)
@@ -538,14 +556,25 @@ struct Index {
     .width(size)
     .height(size)
     .borderRadius(size / 2)
+    .backgroundColor(this.hoveredTopAction === hoverKey ? HOVER_BG_COLOR : Color.Transparent)
+    .scale(this.hoveredTopAction === hoverKey ? { x: 1.06, y: 1.06 } : { x: 1, y: 1 })
+    .animation({ duration: 150, curve: Curve.EaseOut })
     .systemMaterial(topBarMaterial(true))
+    .hoverEffect(HoverEffect.Highlight)
+    .onHover((isHover: boolean) => {
+      if (isHover) {
+        this.hoveredTopAction = hoverKey;
+      } else if (this.hoveredTopAction === hoverKey) {
+        this.hoveredTopAction = '';
+      }
+    })
     .onClick(onClick)
   }
 
   @Builder
-  msgButton() {
+  msgButton(size: number = 44) {
     Stack() {
-      this.circleIconButton($r('sys.symbol.bell'), 44, 22, () => {
+      this.circleIconButton($r('sys.symbol.bell'), size, size >= 56 ? 26 : 22, 'msg', () => {
         this.context.eventHub.emit(EVENT_TOP_MSG);
       })
       if (this.homeUnreadCount !== '') {
@@ -560,37 +589,53 @@ struct Index {
           })
           .backgroundColor(this.navSelected)
           .borderRadius(8)
-          .offset({ x: 6, y: -8 })
+          .offset({ x: 8, y: -10 })
       }
     }
-    .width(44)
-    .height(44)
+    .width(size)
+    .height(size)
   }
 
   @Builder
-  avatarButton() {
+  avatarButton(size: number = 44) {
     if (this.homeFaceUrl !== '') {
-      Image(this.homeFaceUrl)
-        .width(41)
-        .height(41)
-        .borderRadius(20.5)
-        .onClick(() => {
-          this.context.eventHub.emit(EVENT_TOP_MINE);
-        })
-        .systemMaterial(topBarMaterial(true))
+      Stack() {
+        Image(this.homeFaceUrl)
+          .width(size - 4)
+          .height(size - 4)
+          .borderRadius((size - 4) / 2)
+      }
+      .width(size)
+      .height(size)
+      .borderRadius(size / 2)
+      .backgroundColor(this.hoveredTopAction === 'avatar' ? HOVER_BG_COLOR : Color.Transparent)
+      .scale(this.hoveredTopAction === 'avatar' ? { x: 1.06, y: 1.06 } : { x: 1, y: 1 })
+      .animation({ duration: 150, curve: Curve.EaseOut })
+      .systemMaterial(topBarMaterial(true))
+      .hoverEffect(HoverEffect.Highlight)
+      .onHover((isHover: boolean) => {
+        if (isHover) {
+          this.hoveredTopAction = 'avatar';
+        } else if (this.hoveredTopAction === 'avatar') {
+          this.hoveredTopAction = '';
+        }
+      })
+      .onClick(() => {
+        this.context.eventHub.emit(EVENT_TOP_MINE);
+      })
     } else {
-      this.circleIconButton($r('sys.symbol.person_crop_circle_fill'), 44, 26, () => {
+      this.circleIconButton($r('sys.symbol.person_crop_circle_fill'), size, size >= 56 ? 28 : 26, 'avatar', () => {
         this.context.eventHub.emit(EVENT_TOP_MINE);
       })
     }
   }
 
   @Builder
-  categoryIconItem(index: number, name: string) {
+  categoryIconItem(index: number, name: string, large: boolean) {
     Stack({ alignContent: Alignment.Center }) {
       if (homeTabSymbol(name) !== null) {
         SymbolGlyph(homeTabSymbol(name) as Resource)
-          .fontSize(20)
+          .fontSize(large ? 26 : 20)
           .fontColor(
             [this.categoryCurrentIndex === index ? this.navSelected : NAV_UNSELECTED,
               this.categoryCurrentIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
@@ -598,16 +643,30 @@ struct Index {
           .symbolEffect(new BounceSymbolEffect(), this.categoryCurrentIndex === index)
       } else {
         Text(name)
-          .fontSize(14)
+          .fontSize(large ? 15 : 14)
           .fontWeight(this.categoryCurrentIndex === index ? FontWeight.Bolder : FontWeight.Medium)
           .fontColor(this.categoryCurrentIndex === index ? this.navSelected : NAV_UNSELECTED)
-          .padding({ left: 8, right: 8 })
+          .padding({ left: 10, right: 10 })
       }
     }
-    .height(34)
-    .constraintSize({ minWidth: 42 })
-    .borderRadius(17)
-    .backgroundColor(this.categoryCurrentIndex === index ? this.navSelectedSub : Color.Transparent)
+    .height(large ? 44 : 34)
+    .constraintSize({ minWidth: large ? 54 : 42 })
+    .borderRadius(large ? 22 : 17)
+    .backgroundColor(
+      this.categoryCurrentIndex === index
+        ? this.navSelectedSub
+        : (this.hoveredCatIndex === index ? HOVER_BG_COLOR : Color.Transparent)
+    )
+    .scale(this.hoveredCatIndex === index ? { x: 1.06, y: 1.06 } : { x: 1, y: 1 })
+    .animation({ duration: 150, curve: Curve.EaseOut })
+    .hoverEffect(HoverEffect.Highlight)
+    .onHover((isHover: boolean) => {
+      if (isHover) {
+        this.hoveredCatIndex = index;
+      } else if (this.hoveredCatIndex === index) {
+        this.hoveredCatIndex = -1;
+      }
+    })
     .onClick(() => {
       this.context.eventHub.emit(EVENT_HOME_TAB_CHANGE, index);
       this.categoryCurrentIndex = index;
@@ -616,14 +675,14 @@ struct Index {
 
   /// 首页分类栏（直播/推荐/热门/分区/番剧/影视），按按钮数量自适应宽度
   @Builder
-  categoryTabs() {
-    Row({ space: 4 }) {
+  categoryTabs(large: boolean = false) {
+    Row({ space: large ? 4 : 4 }) {
       ForEach(this.homeTabs, (tab: string, index: number) => {
-        this.categoryIconItem(index, tab)
+        this.categoryIconItem(index, tab, large)
       }, (tab: string, index: number) => index + '_' + tab)
     }
-    .height(CATEGORY_TABS_HEIGHT)
-    .padding({ left: 5, right: 5 })
+    .height(large ? WIDE_TOP_ITEM_HEIGHT : CATEGORY_TABS_HEIGHT)
+    .padding({ left: 6, right: 6 })
     .alignItems(VerticalAlign.Center)
   }
 
@@ -632,12 +691,12 @@ struct Index {
     Column() {
       Stack({ alignContent: Alignment.Center }) {
         if (this.isWideSingleRowTopBar() && this.canTrueCenterWideTopBar()) {
-          // 屏幕水平绝对居中：不受右侧搜索/通知/头像宽度挤压偏左
+          // 屏幕水平绝对居中：高度与底栏一致（56vp），不受右侧搜索/通知/头像挤压偏左
           Row() {
-            this.categoryTabs()
+            this.categoryTabs(true)
           }
-          .height(44)
-          .borderRadius(22)
+          .height(WIDE_TOP_ITEM_HEIGHT)
+          .borderRadius(WIDE_TOP_ITEM_HEIGHT / 2)
           .clip(true)
           .systemMaterial(topBarMaterial(true))
 
@@ -647,21 +706,29 @@ struct Index {
               .focusable(false)
               .enableKeyboardOnFocus(false)
               .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
-                .fontColor([this.navSelected]).fontSize(16))
+                .fontColor([this.navSelected]).fontSize(18))
               .placeholderColor($r('app.color.placeholder_text'))
-              .placeholderFont({ size: 15, weight: 600 })
+              .placeholderFont({ size: 16, weight: 600 })
               .fontColor($r('app.color.placeholder_text'))
-              .textFont({ size: 15, weight: 600 })
-              .backgroundColor(Color.Transparent)
-              .borderRadius(22)
+              .textFont({ size: 16, weight: 600 })
+              .backgroundColor(this.hoveredTopAction === 'search' ? HOVER_BG_COLOR : Color.Transparent)
+              .borderRadius(WIDE_TOP_ITEM_HEIGHT / 2)
               .width(this.wideSearchWidth())
-              .height(44)
+              .height(WIDE_TOP_ITEM_HEIGHT)
               .systemMaterial(topBarMaterial(true))
+              .hoverEffect(HoverEffect.Highlight)
+              .onHover((isHover: boolean) => {
+                if (isHover) {
+                  this.hoveredTopAction = 'search';
+                } else if (this.hoveredTopAction === 'search') {
+                  this.hoveredTopAction = '';
+                }
+              })
               .onClick(() => {
                 this.context.eventHub.emit(EVENT_TOP_SEARCH);
               })
-            this.msgButton()
-            this.avatarButton()
+            this.msgButton(WIDE_TOP_ITEM_HEIGHT)
+            this.avatarButton(WIDE_TOP_ITEM_HEIGHT)
           }
           .width('100%')
           .padding({
@@ -675,10 +742,10 @@ struct Index {
             if (this.isWideSingleRowTopBar()) {
               Row() {
                 Row() {
-                  this.categoryTabs()
+                  this.categoryTabs(true)
                 }
-                .height(44)
-                .borderRadius(22)
+                .height(WIDE_TOP_ITEM_HEIGHT)
+                .borderRadius(WIDE_TOP_ITEM_HEIGHT / 2)
                 .clip(true)
                 .systemMaterial(topBarMaterial(true))
               }
@@ -690,19 +757,29 @@ struct Index {
                 .focusable(false)
                 .enableKeyboardOnFocus(false)
                 .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
-                  .fontColor([this.navSelected]).fontSize(16))
+                  .fontColor([this.navSelected]).fontSize(18))
                 .placeholderColor($r('app.color.placeholder_text'))
-                .placeholderFont({ size: 15, weight: 600 })
+                .placeholderFont({ size: 16, weight: 600 })
                 .fontColor($r('app.color.placeholder_text'))
-                .textFont({ size: 15, weight: 600 })
-                .backgroundColor(Color.Transparent)
-                .borderRadius(22)
+                .textFont({ size: 16, weight: 600 })
+                .backgroundColor(this.hoveredTopAction === 'search' ? HOVER_BG_COLOR : Color.Transparent)
+                .borderRadius(WIDE_TOP_ITEM_HEIGHT / 2)
                 .width(this.wideSearchWidth())
-                .height(44)
+                .height(WIDE_TOP_ITEM_HEIGHT)
                 .systemMaterial(topBarMaterial(true))
+                .hoverEffect(HoverEffect.Highlight)
+                .onHover((isHover: boolean) => {
+                  if (isHover) {
+                    this.hoveredTopAction = 'search';
+                  } else if (this.hoveredTopAction === 'search') {
+                    this.hoveredTopAction = '';
+                  }
+                })
                 .onClick(() => {
                   this.context.eventHub.emit(EVENT_TOP_SEARCH);
                 })
+              this.msgButton(WIDE_TOP_ITEM_HEIGHT)
+              this.avatarButton(WIDE_TOP_ITEM_HEIGHT)
             } else {
               Search({ value: this.homeSearchText, placeholder: '搜索' })
                 .cancelButton({ style: CancelButtonStyle.INVISIBLE })
@@ -714,17 +791,25 @@ struct Index {
                 .placeholderFont({ size: 16, weight: 600 })
                 .fontColor($r('app.color.placeholder_text'))
                 .textFont({ size: 16, weight: 600 })
-                .backgroundColor(Color.Transparent)
+                .backgroundColor(this.hoveredTopAction === 'search' ? HOVER_BG_COLOR : Color.Transparent)
                 .borderRadius(22)
                 .layoutWeight(1)
                 .height(44)
                 .systemMaterial(topBarMaterial(true))
+                .hoverEffect(HoverEffect.Highlight)
+                .onHover((isHover: boolean) => {
+                  if (isHover) {
+                    this.hoveredTopAction = 'search';
+                  } else if (this.hoveredTopAction === 'search') {
+                    this.hoveredTopAction = '';
+                  }
+                })
                 .onClick(() => {
                   this.context.eventHub.emit(EVENT_TOP_SEARCH);
                 })
+              this.msgButton(44)
+              this.avatarButton(44)
             }
-            this.msgButton()
-            this.avatarButton()
           }
           .width('100%')
           .padding({
@@ -746,7 +831,7 @@ struct Index {
         top: this.homeTabs.length > 1 && !this.isWideSingleRowTopBar() ? 5 : 9,
         bottom: 5
       })
-      .height(44)
+      .height(this.isWideSingleRowTopBar() ? WIDE_TOP_ITEM_HEIGHT : 44)
       .animation({ duration: TOP_BAR_MOTION_DURATION, curve: TOP_BAR_MOTION_CURVE })
 
       if (!this.isWideSingleRowTopBar() && this.homeTabs.length > 1) {
@@ -785,6 +870,32 @@ struct Index {
   /// 隐式 .animation() 与 animateTo 一律退化成跳变。
   /// 因此收缩动画与显隐一律由外层裁剪容器承担，Navigation 保持常量属性，
   /// 标题栏内部的节点才能回到原地更新，沿用既有的 .animation() 写法。
+  /// 顶部沉浸光感栏渐进模糊衬底（与底部 hdsBottomBarMask 对称，消除硬分界线）
+  @Builder
+  hdsTopBarMask() {
+    Column()
+      .width('100%')
+      .height((this.isWideSingleRowTopBar() ? TOP_BAR_WIDE_EXPANDED_HEIGHT : TOP_BAR_EXPANDED_HEIGHT) + TOP_BAR_MASK_EXTRA_HEIGHT)
+      .linearGradient({
+        direction: GradientDirection.Bottom,
+        colors: [
+          [$r('app.color.top_bar_mask_start'), 0],
+          [$r('app.color.top_bar_mask_mid'), 0.6],
+          [$r('app.color.top_bar_mask_end'), 0.92],
+          [$r('app.color.top_bar_mask_end'), 1],
+        ],
+      })
+      .linearGradientBlur(TOP_BAR_BLUR_RADIUS, {
+        fractionStops: TOP_BAR_FRACTION_STOPS,
+        direction: GradientDirection.Top
+      })
+      .opacity(this.topBarCollapsed ? 0 : 1)
+      .animation({ duration: TOP_BAR_MOTION_DURATION, curve: TOP_BAR_MOTION_CURVE })
+      .visibility(this.topBarHidden ? Visibility.None : Visibility.Visible)
+      .align(Alignment.Top)
+      .hitTestBehavior(HitTestMode.None)
+  }
+
   @Builder
   homeTopBarHost() {
     HdsNavigation() {
@@ -806,8 +917,8 @@ struct Index {
         },
         originalStyle: {
           backgroundStyle: {
-            backgroundColor: this.getBackgroundColor(),
-            blurRadius: TOP_BAR_BLUR_RADIUS
+            backgroundColor: '#00000000',
+            blurRadius: 0
           }
         },
         systemMaterialEffect: {
@@ -1151,7 +1262,8 @@ struct Index {
         }
       })
       .width(this.enableHoldingHandBottomBar ? this.bottomBarCapsuleWidth() : '100%')
-      .height('100%')
+      .height(56 + this.bottomAvoidAreaHeight + 24)
+      .clip(false)
       .hitTestBehavior(HitTestMode.Transparent)
     }
     .width('100%')
@@ -1180,6 +1292,7 @@ struct Index {
       // API 26+：Navigation 标题栏 + ArkUI systemMaterial（全部元素带材质）
       // API 23~25：自绘顶栏，仅消息按钮（HdsTabs 悬浮栏）带 HDS 材质
       if (this.useNativeTopBar && deviceInfo.sdkApiVersion >= 26) {
+        this.hdsTopBarMask()
         this.homeTopBarHost()
       } else if (this.useNativeTopBar && deviceInfo.sdkApiVersion >= 23) {
         this.homeTopBarHdsHost()
