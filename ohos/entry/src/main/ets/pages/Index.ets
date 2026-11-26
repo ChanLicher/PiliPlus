@@ -925,29 +925,34 @@ struct Index {
   /// 压柔底部视频封面杂色以提升悬浮胶囊可见度，不拦截触摸且随底栏同步显隐。
   @Builder
   hdsBottomBarMask() {
-    Column()
-      .width('100%')
-      .height(56 + this.bottomAvoidAreaHeight + BOTTOM_BAR_MASK_EXTRA_HEIGHT)
-      .linearGradient({
-        direction: GradientDirection.Top,
-        colors: [
-          [$r('app.color.top_bar_mask_start'), 0],
-          [$r('app.color.top_bar_mask_mid'), 0.65],
-          [$r('app.color.top_bar_mask_end'), 0.95],
-          [$r('app.color.top_bar_mask_end'), 1],
-        ],
-      })
-      .linearGradientBlur(BOTTOM_BAR_BLUR_RADIUS, {
-        fractionStops: BOTTOM_BAR_FRACTION_STOPS,
-        direction: GradientDirection.Bottom
-      })
-      .opacity(this.shellBarsScrollHidden ? 0 : 1)
-      .animation({ duration: 200, curve: Curve.EaseOut })
-      .visibility(this.navTabs.length <= 1 || this.shellBarsHidden
-        ? Visibility.None
-        : Visibility.Visible)
-      .align(Alignment.Bottom)
-      .hitTestBehavior(HitTestMode.None)
+    Column() {
+      Column()
+        .width('100%')
+        .height(56 + this.bottomAvoidAreaHeight + BOTTOM_BAR_MASK_EXTRA_HEIGHT)
+        .linearGradient({
+          direction: GradientDirection.Top,
+          colors: [
+            [$r('app.color.top_bar_mask_start'), 0],
+            [$r('app.color.top_bar_mask_mid'), 0.65],
+            [$r('app.color.top_bar_mask_end'), 0.95],
+            [$r('app.color.top_bar_mask_end'), 1],
+          ],
+        })
+        .linearGradientBlur(BOTTOM_BAR_BLUR_RADIUS, {
+          fractionStops: BOTTOM_BAR_FRACTION_STOPS,
+          direction: GradientDirection.Bottom
+        })
+        .opacity(this.shellBarsScrollHidden ? 0 : 1)
+        .animation({ duration: 200, curve: Curve.EaseOut })
+        .hitTestBehavior(HitTestMode.None)
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.End)
+    .visibility(this.navTabs.length <= 1 || this.shellBarsHidden
+      ? Visibility.None
+      : Visibility.Visible)
+    .hitTestBehavior(HitTestMode.None)
   }
 
   @Builder
