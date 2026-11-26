@@ -11,34 +11,79 @@ type HandHandler = (isLeft: boolean, fromOperating: boolean) => void;
 export class MotionHand {
   private static instance: MotionHand | null = null;
   private readonly holdingHandCallback = (status: motion.HoldingHandStatus): void => {
-    // NOT_HELD / BOTH_HANDS_HELD / UNKNOWN_STATUS：保持当前侧
     if (status === motion.HoldingHandStatus.LEFT_HAND_HELD) {
-      this.handler?.(true, false);
+      if (this.fabEnabled) {
+        this.handler?.(true, false);
+      }
+      if (this.bottomBarEnabled) {
+        AppStorage.setOrCreate('bottomBarHandSide', -1);
+      }
     } else if (status === motion.HoldingHandStatus.RIGHT_HAND_HELD) {
-      this.handler?.(false, false);
+      if (this.fabEnabled) {
+        this.handler?.(false, false);
+      }
+      if (this.bottomBarEnabled) {
+        AppStorage.setOrCreate('bottomBarHandSide', 1);
+      }
+    } else if (this.bottomBarEnabled) {
+      // NOT_HELD / BOTH_HANDS_HELD / UNKNOWN_STATUS：底栏回中，FAB 保持当前侧
+      AppStorage.setOrCreate('bottomBarHandSide', 0);
     }
   };
   private readonly operatingHandCallback = (status: motion.OperatingHandStatus): void => {
     if (status === motion.OperatingHandStatus.LEFT_HAND_OPERATED) {
-      this.handler?.(true, true);
+      if (this.fabEnabled) {
+        this.handler?.(true, true);
+      }
+      if (this.bottomBarEnabled) {
+        AppStorage.setOrCreate('bottomBarHandSide', -1);
+      }
     } else if (status === motion.OperatingHandStatus.RIGHT_HAND_OPERATED) {
-      this.handler?.(false, true);
+      if (this.fabEnabled) {
+        this.handler?.(false, true);
+      }
+      if (this.bottomBarEnabled) {
+        AppStorage.setOrCreate('bottomBarHandSide', 1);
+      }
     }
   };
   private handler: HandHandler | null = null;
+  private fabEnabled: boolean = false;
+  private bottomBarEnabled: boolean = false;
   private holdingSubscribed: boolean = false;
   private operatingSubscribed: boolean = false;
 
-  static setMonitor(enable: boolean, onChange: HandHandler | null): void {
+  private static getInstance(): MotionHand {
     if (MotionHand.instance === null) {
       MotionHand.instance = new MotionHand();
     }
-    MotionHand.instance.setMonitorInner(enable, onChange);
+    return MotionHand.instance;
   }
 
-  private setMonitorInner(enable: boolean, onChange: HandHandler | null): void {
-    this.handler = onChange;
-    if (enable) {
+  static setMonitor(enable: boolean, onChange: HandHandler | null): void {
+    MotionHand.getInstance().setFabMonitorInner(enable, onChange);
+  }
+
+  static setBottomBarMonitor(enable: boolean): void {
+    MotionHand.getInstance().setBottomBarMonitorInner(enable);
+  }
+
+  private setFabMonitorInner(enable: boolean, onChange: HandHandler | null): void {
+    this.fabEnabled = enable;
+    this.handler = enable ? onChange : null;
+    this.syncSubscription();
+  }
+
+  private setBottomBarMonitorInner(enable: boolean): void {
+    this.bottomBarEnabled = enable;
+    if (!enable) {
+      AppStorage.setOrCreate('bottomBarHandSide', 0);
+    }
+    this.syncSubscription();
+  }
+
+  private syncSubscription(): void {
+    if (this.fabEnabled || this.bottomBarEnabled) {
       this.subscribeInner();
     } else {
       this.unsubscribeInner();

@@ -62,7 +62,9 @@ class NativeTopSpacer extends StatelessWidget {
   static double staticHeight(BuildContext context) {
     if (!_active) return 0;
     final collapsed = _collapsed;
-    final single = (_homeController?.tabs.length ?? 0) <= 1;
+    // 宽屏（>=600vp）下原生顶栏将分类胶囊与搜索栏合并为单行，使用单行留白高度
+    final isWideSingleRow = MediaQuery.sizeOf(context).width >= 600;
+    final single = isWideSingleRow || (_homeController?.tabs.length ?? 0) <= 1;
     double topHeight = 0;
     if (single) {
       topHeight = collapsed ? singleCollapsedHeight : singleExpandedHeight;
@@ -81,7 +83,10 @@ class NativeTopSpacer extends StatelessWidget {
   /// displacement 落在「可视顶边下方」，与非沉浸页面观感一致。
   static double refreshEdgeOffset(BuildContext context) {
     if (!_active) return 0;
-    final barHeight = _collapsed ? barCollapsedHeight : barExpandedHeight;
+    final isWideSingleRow = MediaQuery.sizeOf(context).width >= 600;
+    final expanded = isWideSingleRow ? singleExpandedHeight : barExpandedHeight;
+    final collapsed = isWideSingleRow ? singleCollapsedHeight : barCollapsedHeight;
+    final barHeight = _collapsed ? collapsed : expanded;
     final statusBarHeight = HarmonyChannel.rootTopInset(context);
     // 需要加上状态栏高度
     return max(0.0, barHeight + statusBarHeight);

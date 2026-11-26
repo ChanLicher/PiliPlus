@@ -861,6 +861,12 @@ abstract final class Pref {
   static bool get enableHoldingHandFab =>
       _setting.get(SettingBoxKey.enableHoldingHandFab, defaultValue: true);
 
+  /// 鸿蒙智感握姿：原生沉浸底栏跟随单手握持移至左/右下角，双手或平放回中
+  static bool get enableHoldingHandBottomBar => _setting.get(
+    SettingBoxKey.enableHoldingHandBottomBar,
+    defaultValue: true,
+  );
+
   /// 鸿蒙沉浸光感底栏材质等级，仅原生底栏启用时生效
   static HdsMaterialLevel get hdsTabMaterialLevel =>
       HdsMaterialLevel.values[_setting.get(

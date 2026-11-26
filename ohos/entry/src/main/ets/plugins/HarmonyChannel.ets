@@ -337,8 +337,14 @@ export default class HarmonyChannel implements FlutterPlugin, AbilityAware {
           break;
         }
         const useNativeTabs: boolean = call.argument('useNativeTabs') ?? false;
+        const enableHoldingHandBottomBar: boolean =
+          call.argument('enableHoldingHandBottomBar') ?? true;
         console.log(`is use native tabs: ${useNativeTabs}`);
         AppStorage.setOrCreate('useNativeTabs', useNativeTabs);
+        AppStorage.setOrCreate('enableHoldingHandBottomBar', enableHoldingHandBottomBar);
+        if (deviceInfo.sdkApiVersion >= 20) {
+          MotionHand.setBottomBarMonitor(useNativeTabs && enableHoldingHandBottomBar);
+        }
         result.success(true);
         break;
       }
@@ -523,6 +529,16 @@ export default class HarmonyChannel implements FlutterPlugin, AbilityAware {
             { 'isLeft': isLeft, 'fromOperating': fromOperating };
           this.channel?.invokeMethod("onHoldingHandChange", args);
         });
+        result.success(true);
+        break;
+      }
+      case "setHoldingHandBottomBar": {
+        const enable: boolean = call.argument('enable') ?? true;
+        AppStorage.setOrCreate('enableHoldingHandBottomBar', enable);
+        if (deviceInfo.sdkApiVersion >= 20) {
+          const useNativeTabs = AppStorage.get('useNativeTabs') === true;
+          MotionHand.setBottomBarMonitor(enable && useNativeTabs);
+        }
         result.success(true);
         break;
       }

@@ -124,6 +124,15 @@ List<SettingsModel> get styleSettings => [
     defaultVal: false,
     needReboot: true,
   ),
+  if (OS.isHarmony)
+    SwitchModel(
+      title: '底栏跟随智感握姿',
+      subtitle: '原生沉浸底栏随单手握持移至左/右下角，双手或平放回中',
+      leading: const Icon(Icons.pan_tool_alt_outlined),
+      setKey: SettingBoxKey.enableHoldingHandBottomBar,
+      defaultVal: true,
+      onChanged: (value) => HarmonyChannel.setHoldingHandBottomBar(value),
+    ),
   NormalModel(
     title: 'App字体设置',
     subtitle: '点击设置',

@@ -218,9 +218,18 @@ abstract class HarmonyChannel {
   static Future<void> setHoldingHandMonitor(bool enable) =>
       _invoke('setHoldingHandMonitor', {'enable': enable});
 
+  /// 开关鸿蒙智感握姿底栏左右跟随
+  static Future<void> setHoldingHandBottomBar(bool enable) =>
+      _invoke('setHoldingHandBottomBar', {'enable': enable});
+
   /// 向原生发送 shell 配置（Flutter 侧计算后通知 ArkTS）
-  static Future<void> setShellBars({required bool useNativeTabs}) =>
-      _invoke('setShellBars', {'useNativeTabs': useNativeTabs});
+  static Future<void> setShellBars({required bool useNativeTabs}) => _invoke(
+    'setShellBars',
+    {
+      'useNativeTabs': useNativeTabs,
+      'enableHoldingHandBottomBar': Pref.enableHoldingHandBottomBar,
+    },
+  );
 
   /// 同步 Navbar 页签（数量与顺序，与设置内「Navbar 编辑」一致）到 ArkTS HdsTabs
   static Future<void> setNavBarConfig(List<NavigationBarType> bars) =>

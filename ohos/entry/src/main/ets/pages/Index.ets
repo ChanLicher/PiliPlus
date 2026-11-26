@@ -29,6 +29,9 @@ const BOTTOM_BAR_FRACTION_STOPS: [number, number][] = [[0, 0], [0.55, 0.35], [1,
 const BOTTOM_BAR_MASK_EXTRA_HEIGHT = 48;
 const TOP_BAR_COLLAPSED_HEIGHT = 80;
 const TOP_BAR_EXPANDED_HEIGHT = 144;
+const TOP_BAR_WIDE_EXPANDED_HEIGHT = 104;
+const WIDE_TOP_BAR_MIN_WIDTH = 600;
+const WIDE_SEARCH_BAR_WIDTH = 200;
 /// 顶栏收缩曲线：重减速的三次贝塞尔，起步轻、尾段长距离滑停，
 /// 比对称的 EaseInOut 柔和。裁剪容器/内容容器/搜索行三处高度共用同一条
 /// 曲线与时长，避免各自为政导致的错位；数值需与 Flutter 侧
@@ -114,6 +117,9 @@ struct Index {
   @StorageLink('dynBadgeCount') dynBadgeCount: number = 0;
   /// 沉浸光感底栏材质等级（Flutter 按设置下发；0=精美 1=轻柔 2=流畅 10=自适应）
   @StorageLink('tabMaterialLevel') tabMaterialLevel: number = 10;
+  /// 智感握姿底栏开关及当前握持侧（-1=左 0=中 1=右）
+  @StorageLink('enableHoldingHandBottomBar') enableHoldingHandBottomBar: boolean = true;
+  @StorageLink('bottomBarHandSide') bottomBarHandSide: number = 0;
   /// 自绘标题带显隐与占位高度，由 WindowChrome 下发（自由窗口形态下为 true）
   @StorageLink('titleBarVisible') @Watch('onTitleBarVisibleChanged') titleBarVisible: boolean = false;
   @StorageLink('titleBarHeight') titleBarHeight: number = 0;
@@ -163,6 +169,10 @@ struct Index {
 
   private isTopBarCollapsed(): boolean {
     return this.homeHideTopBar && this.topBarCollapsed;
+  }
+
+  private isWideSingleRowTopBar(): boolean {
+    return this.winWidth >= WIDE_TOP_BAR_MIN_WIDTH && this.homeTabs.length > 1;
   }
 
   onScrollHiddenChanged(): void {
@@ -574,24 +584,55 @@ struct Index {
   homeTopBar() {
     Column() {
       Row({ space: 8 }) {
-        Search({ value: this.homeSearchText, placeholder: '搜索' })
-          .cancelButton({ style: CancelButtonStyle.INVISIBLE })
-          .focusable(false)
-          .enableKeyboardOnFocus(false)
-          .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
-            .fontColor([this.navSelected]).fontSize(16))
-          .placeholderColor($r('app.color.placeholder_text'))
-          .placeholderFont({ size: 16, weight: 600 })
-          .fontColor($r('app.color.placeholder_text'))
-          .textFont({ size: 16, weight: 600 })
-          .backgroundColor(Color.Transparent)
-          .borderRadius(22)
+        if (this.isWideSingleRowTopBar()) {
+          Row() {
+            this.categoryTabs()
+          }
           .layoutWeight(1)
           .height(44)
+          .padding({ left: 4, right: 4 })
+          .borderRadius(22)
+          .clip(true)
           .systemMaterial(topBarMaterial(true))
-          .onClick(() => {
-            this.context.eventHub.emit(EVENT_TOP_SEARCH);
-          })
+
+          Search({ value: this.homeSearchText, placeholder: '搜索' })
+            .cancelButton({ style: CancelButtonStyle.INVISIBLE })
+            .focusable(false)
+            .enableKeyboardOnFocus(false)
+            .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+              .fontColor([this.navSelected]).fontSize(16))
+            .placeholderColor($r('app.color.placeholder_text'))
+            .placeholderFont({ size: 15, weight: 600 })
+            .fontColor($r('app.color.placeholder_text'))
+            .textFont({ size: 15, weight: 600 })
+            .backgroundColor(Color.Transparent)
+            .borderRadius(22)
+            .width(WIDE_SEARCH_BAR_WIDTH)
+            .height(44)
+            .systemMaterial(topBarMaterial(true))
+            .onClick(() => {
+              this.context.eventHub.emit(EVENT_TOP_SEARCH);
+            })
+        } else {
+          Search({ value: this.homeSearchText, placeholder: '搜索' })
+            .cancelButton({ style: CancelButtonStyle.INVISIBLE })
+            .focusable(false)
+            .enableKeyboardOnFocus(false)
+            .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+              .fontColor([this.navSelected]).fontSize(16))
+            .placeholderColor($r('app.color.placeholder_text'))
+            .placeholderFont({ size: 16, weight: 600 })
+            .fontColor($r('app.color.placeholder_text'))
+            .textFont({ size: 16, weight: 600 })
+            .backgroundColor(Color.Transparent)
+            .borderRadius(22)
+            .layoutWeight(1)
+            .height(44)
+            .systemMaterial(topBarMaterial(true))
+            .onClick(() => {
+              this.context.eventHub.emit(EVENT_TOP_SEARCH);
+            })
+        }
         this.msgButton()
         this.avatarButton()
       }
@@ -609,14 +650,26 @@ struct Index {
         delay: this.homeHideTopBar && this.topBarCollapsed ? 0 : TOP_BAR_FADE_IN_DELAY
       })
       .margin({
-        top: this.homeTabs.length > 1 ? 5 : 9,
+        top: this.homeTabs.length > 1 && !this.isWideSingleRowTopBar() ? 5 : 9,
         bottom: 5
       })
       .height(44)
       .animation({ duration: TOP_BAR_MOTION_DURATION, curve: TOP_BAR_MOTION_CURVE })
 
-      if (this.homeTabs.length > 1) {
-        this.categoryTabs()
+      if (!this.isWideSingleRowTopBar() && this.homeTabs.length > 1) {
+        Row() {
+          Row() {
+            this.categoryTabs()
+          }
+          .width('100%')
+          .height(36)
+          .padding({ left: 4, right: 4 })
+          .borderRadius(18)
+          .clip(true)
+          .systemMaterial(topBarMaterial(true))
+        }
+        .width('100%')
+        .padding({ left: 14, right: 14 })
       }
     }
     .width('100%')
@@ -675,11 +728,17 @@ struct Index {
       }
     })
     // 状态栏避让由顶栏内部的 statusBarHeight padding 负责，避免重复加一层
-    .margin({ top: this.topBarCollapsed? TOP_BAR_COLLAPSED_HEIGHT-TOP_BAR_EXPANDED_HEIGHT : 0 })
+    .margin({
+      top: this.topBarCollapsed
+        ? (this.isWideSingleRowTopBar()
+          ? -TOP_BAR_WIDE_EXPANDED_HEIGHT
+          : TOP_BAR_COLLAPSED_HEIGHT - TOP_BAR_EXPANDED_HEIGHT)
+        : 0
+    })
     .animation({ duration: TOP_BAR_MOTION_DURATION, curve: TOP_BAR_MOTION_CURVE })
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
     .width('100%')
-    .height(TOP_BAR_EXPANDED_HEIGHT)
+    .height(this.isWideSingleRowTopBar() ? TOP_BAR_WIDE_EXPANDED_HEIGHT : TOP_BAR_EXPANDED_HEIGHT)
     .visibility(this.topBarHidden ? Visibility.None : Visibility.Visible)
     .align(Alignment.Top)
     .clip(true)
@@ -955,38 +1014,64 @@ struct Index {
     .hitTestBehavior(HitTestMode.None)
   }
 
+  private resolveBottomBarAlign(): FlexAlign {
+    if (!this.enableHoldingHandBottomBar || this.bottomBarHandSide === 0) {
+      return FlexAlign.Center;
+    }
+    return this.bottomBarHandSide < 0 ? FlexAlign.Start : FlexAlign.End;
+  }
+
+  private bottomBarCapsuleWidth(): number {
+    const maxAllowed = this.winWidth > 32 ? this.winWidth - 32 : 328;
+    const ideal = Math.min(328, Math.max(200, this.navTabs.length * 80));
+    return Math.min(maxAllowed, ideal);
+  }
+
   @Builder
   hdsMainTabs() {
-    HdsTabs({ controller: this.controller }) {
-      ForEach(this.navTabs, (typeIndex: number, index: number) => {
-        TabContent() { // empty
-        }
-        .tabBar(this.navTabBuilder(typeIndex, index))
-      }, (typeIndex: number, index: number) => index + '_' + typeIndex)
-    }
-    .onTabBarClick((index: number) => {
-      this.currentNavIndex = index;
-      this.context.eventHub.emit(EVENT_TAB_SWITCH, index);
-    })
-    .scrollable(false)
-    .barOverlap(true)
-    .barPosition(BarPosition.End)
-    .vertical(false)
-    .barHeight(56)
-    .barFloatingStyle({
-      barBottomMargin: this.bottomAvoidAreaHeight,
-      adaptToHandedness: true,
-      gradientMask: { maskColor: this.getBackgroundColor(), maskHeight: 96 },
-      systemMaterialEffect: {
-        materialType: hdsMaterial.MaterialType.IMMERSIVE,
-        materialLevel: this.resolveMaterialLevel()
+    Row() {
+      HdsTabs({ controller: this.controller }) {
+        ForEach(this.navTabs, (typeIndex: number, index: number) => {
+          TabContent() { // empty
+          }
+          .tabBar(this.navTabBuilder(typeIndex, index))
+        }, (typeIndex: number, index: number) => index + '_' + typeIndex)
       }
-    })
+      .onTabBarClick((index: number) => {
+        this.currentNavIndex = index;
+        this.context.eventHub.emit(EVENT_TAB_SWITCH, index);
+      })
+      .scrollable(false)
+      .barOverlap(true)
+      .barPosition(BarPosition.End)
+      .vertical(false)
+      .barHeight(56)
+      .barFloatingStyle({
+        barBottomMargin: this.bottomAvoidAreaHeight,
+        barSideMargin: this.enableHoldingHandBottomBar ? 0 : 16,
+        adaptToHandedness: !this.enableHoldingHandBottomBar,
+        gradientMask: this.enableHoldingHandBottomBar
+          ? { maskColor: '#00000000', maskHeight: 1 }
+          : { maskColor: this.getBackgroundColor(), maskHeight: 96 },
+        systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: this.resolveMaterialLevel()
+        }
+      })
+      .width(this.enableHoldingHandBottomBar ? this.bottomBarCapsuleWidth() : '100%')
+      .height('100%')
+      .hitTestBehavior(HitTestMode.Transparent)
+    }
+    .width('100%')
+    .height('100%')
+    .padding(this.enableHoldingHandBottomBar ? { left: 16, right: 16 } : { left: 0, right: 0 })
+    .justifyContent(this.resolveBottomBarAlign())
+    .alignItems(VerticalAlign.Bottom)
+    .animation({ duration: 260, curve: Curve.EaseInOut })
     .visibility(this.navTabs.length <= 1 || this.shellBarsHidden
       ? Visibility.None
       : Visibility.Visible)
-    .align(Alignment.Bottom)
-    .hitTestBehavior(HitTestMode.Transparent)
+    .hitTestBehavior(HitTestMode.None)
   }
 
 
