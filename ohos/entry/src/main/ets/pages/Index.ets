@@ -87,6 +87,26 @@ function navTabLabel(typeIndex: number): string {
   }
 }
 
+/// 首页分类页签文案 → 鸿蒙系统图标（未知分类返回 null，自动回退文字）
+function homeTabSymbol(name: string): Resource | null {
+  switch (name) {
+    case '直播':
+      return $r('sys.symbol.dot_video_fill');
+    case '推荐':
+      return $r('sys.symbol.heart_fill');
+    case '热门':
+      return $r('sys.symbol.flame_fill');
+    case '分区':
+      return $r('sys.symbol.square_fill_grid_2x2');
+    case '番剧':
+      return $r('sys.symbol.TV_tv_fill');
+    case '影视':
+      return $r('sys.symbol.movie_fill');
+    default:
+      return null;
+  }
+}
+
 @Entry(storage)
 @Component
 struct Index {
@@ -163,7 +183,6 @@ struct Index {
   onHomeTabIndexChanged(): void {
     if (this.homeActiveTabIndex >= 0 && this.homeActiveTabIndex < this.homeTabs.length) {
       this.categoryCurrentIndex = this.homeActiveTabIndex;
-      this.categoryController.changeIndex(this.homeActiveTabIndex);
     }
   }
 
@@ -440,7 +459,7 @@ struct Index {
 
   @Builder
   navTabBuilder(typeIndex: number, index: number) {
-    Column({ space: 3 }) {
+    Column() {
       if (typeIndex === 1 && this.dynBadgeCount > 0 && this.dynBadgeMode !== 0) {
         if (this.dynBadgeMode === 1) {
           // 红点角标
@@ -450,7 +469,7 @@ struct Index {
             style: { badgeSize: 8, badgeColor: this.navSelected, borderColor: $r('sys.color.comp_common_contrary') }
           }) {
             SymbolGlyph(navTabSymbol(typeIndex))
-              .fontSize(22)
+              .fontSize(26)
               .fontColor(
                 [this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED,
                   this.currentNavIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
@@ -472,7 +491,7 @@ struct Index {
             }
           }) {
             SymbolGlyph(navTabSymbol(typeIndex))
-              .fontSize(22)
+              .fontSize(26)
               .fontColor(
                 [this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED,
                   this.currentNavIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
@@ -482,20 +501,16 @@ struct Index {
         }
       } else {
         SymbolGlyph(navTabSymbol(typeIndex))
-          .fontSize(22)
+          .fontSize(26)
           .fontColor(
             [this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED,
               this.currentNavIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
           .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
           .symbolEffect(new BounceSymbolEffect(), this.currentNavIndex === index)
       }
-
-      Text(navTabLabel(typeIndex))
-        .fontSize(10.5)
-        .fontWeight(this.currentNavIndex === index ? FontWeight.Bold : FontWeight.Normal)
-        .fontColor(this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED)
     }
     .width('100%')
+    .height('100%')
     .justifyContent(FlexAlign.Center)
   }
 
@@ -559,25 +574,46 @@ struct Index {
     }
   }
 
-  /// 首页分类栏（直播/推荐/热门/分区…），API 26+ 与 API 23~25 两条顶栏路径共用
   @Builder
-  categoryTabs() {
-    Tabs({ barPosition: BarPosition.Start, controller: this.categoryController }) {
-      ForEach(this.homeTabs, (tab: string, index: number) => {
-        TabContent() { // empty
-        }
-        .tabBar(this.categoryTabBuilder(index, tab))
-      }, (tab: string, index: number) => index + '_' + tab)
+  categoryIconItem(index: number, name: string) {
+    Stack({ alignContent: Alignment.Center }) {
+      if (homeTabSymbol(name) !== null) {
+        SymbolGlyph(homeTabSymbol(name) as Resource)
+          .fontSize(20)
+          .fontColor(
+            [this.categoryCurrentIndex === index ? this.navSelected : NAV_UNSELECTED,
+              this.categoryCurrentIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
+          .renderingStrategy(SymbolRenderingStrategy.MULTIPLE_COLOR)
+          .symbolEffect(new BounceSymbolEffect(), this.categoryCurrentIndex === index)
+      } else {
+        Text(name)
+          .fontSize(14)
+          .fontWeight(this.categoryCurrentIndex === index ? FontWeight.Bolder : FontWeight.Medium)
+          .fontColor(this.categoryCurrentIndex === index ? this.navSelected : NAV_UNSELECTED)
+          .padding({ left: 8, right: 8 })
+      }
     }
-    .barMode(BarMode.Scrollable)
-    .fadingEdge(false)
-    .scrollable(false)
-    .width('100%')
-    .height(CATEGORY_TABS_HEIGHT)
-    .onTabBarClick((index: number) => {
+    .height(34)
+    .constraintSize({ minWidth: 42 })
+    .borderRadius(17)
+    .backgroundColor(this.categoryCurrentIndex === index ? this.navSelectedSub : Color.Transparent)
+    .onClick(() => {
       this.context.eventHub.emit(EVENT_HOME_TAB_CHANGE, index);
       this.categoryCurrentIndex = index;
     })
+  }
+
+  /// 首页分类栏（直播/推荐/热门/分区/番剧/影视），按按钮数量自适应宽度
+  @Builder
+  categoryTabs() {
+    Row({ space: 4 }) {
+      ForEach(this.homeTabs, (tab: string, index: number) => {
+        this.categoryIconItem(index, tab)
+      }, (tab: string, index: number) => index + '_' + tab)
+    }
+    .height(CATEGORY_TABS_HEIGHT)
+    .padding({ left: 5, right: 5 })
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -586,14 +622,16 @@ struct Index {
       Row({ space: 8 }) {
         if (this.isWideSingleRowTopBar()) {
           Row() {
-            this.categoryTabs()
+            Row() {
+              this.categoryTabs()
+            }
+            .height(44)
+            .borderRadius(22)
+            .clip(true)
+            .systemMaterial(topBarMaterial(true))
           }
           .layoutWeight(1)
-          .height(44)
-          .padding({ left: 4, right: 4 })
-          .borderRadius(22)
-          .clip(true)
-          .systemMaterial(topBarMaterial(true))
+          .justifyContent(FlexAlign.Center)
 
           Search({ value: this.homeSearchText, placeholder: '搜索' })
             .cancelButton({ style: CancelButtonStyle.INVISIBLE })
@@ -661,14 +699,13 @@ struct Index {
           Row() {
             this.categoryTabs()
           }
-          .width('100%')
-          .height(36)
-          .padding({ left: 4, right: 4 })
-          .borderRadius(18)
+          .height(40)
+          .borderRadius(20)
           .clip(true)
           .systemMaterial(topBarMaterial(true))
         }
         .width('100%')
+        .justifyContent(FlexAlign.Center)
         .padding({ left: 14, right: 14 })
       }
     }

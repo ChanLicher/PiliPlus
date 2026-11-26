@@ -110,6 +110,15 @@ List<SettingsModel> experimentalSettings = [
       ),
     ),
   ),
+  if (OS.isHarmony)
+    SwitchModel(
+      title: '底栏跟随智感握姿',
+      subtitle: '受支持的设备下，原生沉浸底栏随单手握持移至左/右下角，双手或平放回中',
+      leading: const Icon(Icons.pan_tool_alt_outlined),
+      setKey: SettingBoxKey.enableHoldingHandBottomBar,
+      defaultVal: true,
+      onChanged: (value) => HarmonyChannel.setHoldingHandBottomBar(value),
+    ),
     NormalModel(
     title: '后台下载离线缓存视频',
     subtitle: '接入鸿蒙后台任务，切换至后台不中断离线缓存视频下载（始终开启）',
