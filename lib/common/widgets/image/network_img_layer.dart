@@ -16,7 +16,7 @@ class NetworkImgLayer extends StatelessWidget {
     required this.height,
     this.type = ImageType.def,
     this.fadeOutDuration = Duration.zero,
-    this.fadeInDuration = Duration.zero,
+    this.fadeInDuration = const Duration(milliseconds: 200),
     this.quality = 1,
     this.borderRadius = Style.mdRadius,
     this.getPlaceHolder,
@@ -89,7 +89,7 @@ class NetworkImgLayer extends StatelessWidget {
       fit: fit,
       alignment: alignment,
       fadeOutDuration: fadeOutDuration,
-      fadeInDuration: fadeInDuration,
+      fadeInDuration: isEmote ? Duration.zero : fadeInDuration,
       filterQuality: FilterQuality.low,
       placeholder: (_, _) =>
           getPlaceHolder?.call() ??

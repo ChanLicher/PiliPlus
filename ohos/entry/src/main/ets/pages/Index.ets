@@ -194,6 +194,17 @@ struct Index {
     return this.winWidth >= WIDE_TOP_BAR_MIN_WIDTH && this.homeTabs.length > 1;
   }
 
+  private wideSearchWidth(): number {
+    return this.winWidth >= 880 ? WIDE_SEARCH_BAR_WIDTH : 156;
+  }
+
+  /// 宽屏单行时判断屏幕正居中放置分类胶囊是否与右侧搜索/通知/头像区冲突
+  private canTrueCenterWideTopBar(): boolean {
+    const capsuleWidth = this.homeTabs.length * 46 + 16;
+    const rightWidth = this.wideSearchWidth() + 104 + this.titleButtonInset + 14;
+    return (this.winWidth - capsuleWidth) / 2 >= rightWidth + 12;
+  }
+
   onScrollHiddenChanged(): void {
     if (!this.useNativeTabs || this.shellBarsHidden) {
       return;
@@ -619,66 +630,110 @@ struct Index {
   @Builder
   homeTopBar() {
     Column() {
-      Row({ space: 8 }) {
-        if (this.isWideSingleRowTopBar()) {
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.isWideSingleRowTopBar() && this.canTrueCenterWideTopBar()) {
+          // 屏幕水平绝对居中：不受右侧搜索/通知/头像宽度挤压偏左
           Row() {
-            Row() {
-              this.categoryTabs()
-            }
-            .height(44)
-            .borderRadius(22)
-            .clip(true)
-            .systemMaterial(topBarMaterial(true))
+            this.categoryTabs()
           }
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
+          .height(44)
+          .borderRadius(22)
+          .clip(true)
+          .systemMaterial(topBarMaterial(true))
 
-          Search({ value: this.homeSearchText, placeholder: '搜索' })
-            .cancelButton({ style: CancelButtonStyle.INVISIBLE })
-            .focusable(false)
-            .enableKeyboardOnFocus(false)
-            .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
-              .fontColor([this.navSelected]).fontSize(16))
-            .placeholderColor($r('app.color.placeholder_text'))
-            .placeholderFont({ size: 15, weight: 600 })
-            .fontColor($r('app.color.placeholder_text'))
-            .textFont({ size: 15, weight: 600 })
-            .backgroundColor(Color.Transparent)
-            .borderRadius(22)
-            .width(WIDE_SEARCH_BAR_WIDTH)
-            .height(44)
-            .systemMaterial(topBarMaterial(true))
-            .onClick(() => {
-              this.context.eventHub.emit(EVENT_TOP_SEARCH);
-            })
+          Row({ space: 8 }) {
+            Search({ value: this.homeSearchText, placeholder: '搜索' })
+              .cancelButton({ style: CancelButtonStyle.INVISIBLE })
+              .focusable(false)
+              .enableKeyboardOnFocus(false)
+              .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+                .fontColor([this.navSelected]).fontSize(16))
+              .placeholderColor($r('app.color.placeholder_text'))
+              .placeholderFont({ size: 15, weight: 600 })
+              .fontColor($r('app.color.placeholder_text'))
+              .textFont({ size: 15, weight: 600 })
+              .backgroundColor(Color.Transparent)
+              .borderRadius(22)
+              .width(this.wideSearchWidth())
+              .height(44)
+              .systemMaterial(topBarMaterial(true))
+              .onClick(() => {
+                this.context.eventHub.emit(EVENT_TOP_SEARCH);
+              })
+            this.msgButton()
+            this.avatarButton()
+          }
+          .width('100%')
+          .padding({
+            left: 14,
+            right: 14 + this.titleButtonInset,
+          })
+          .justifyContent(FlexAlign.End)
+          .hitTestBehavior(HitTestMode.None)
         } else {
-          Search({ value: this.homeSearchText, placeholder: '搜索' })
-            .cancelButton({ style: CancelButtonStyle.INVISIBLE })
-            .focusable(false)
-            .enableKeyboardOnFocus(false)
-            .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
-              .fontColor([this.navSelected]).fontSize(16))
-            .placeholderColor($r('app.color.placeholder_text'))
-            .placeholderFont({ size: 16, weight: 600 })
-            .fontColor($r('app.color.placeholder_text'))
-            .textFont({ size: 16, weight: 600 })
-            .backgroundColor(Color.Transparent)
-            .borderRadius(22)
-            .layoutWeight(1)
-            .height(44)
-            .systemMaterial(topBarMaterial(true))
-            .onClick(() => {
-              this.context.eventHub.emit(EVENT_TOP_SEARCH);
-            })
+          Row({ space: 8 }) {
+            if (this.isWideSingleRowTopBar()) {
+              Row() {
+                Row() {
+                  this.categoryTabs()
+                }
+                .height(44)
+                .borderRadius(22)
+                .clip(true)
+                .systemMaterial(topBarMaterial(true))
+              }
+              .layoutWeight(1)
+              .justifyContent(FlexAlign.Center)
+
+              Search({ value: this.homeSearchText, placeholder: '搜索' })
+                .cancelButton({ style: CancelButtonStyle.INVISIBLE })
+                .focusable(false)
+                .enableKeyboardOnFocus(false)
+                .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+                  .fontColor([this.navSelected]).fontSize(16))
+                .placeholderColor($r('app.color.placeholder_text'))
+                .placeholderFont({ size: 15, weight: 600 })
+                .fontColor($r('app.color.placeholder_text'))
+                .textFont({ size: 15, weight: 600 })
+                .backgroundColor(Color.Transparent)
+                .borderRadius(22)
+                .width(this.wideSearchWidth())
+                .height(44)
+                .systemMaterial(topBarMaterial(true))
+                .onClick(() => {
+                  this.context.eventHub.emit(EVENT_TOP_SEARCH);
+                })
+            } else {
+              Search({ value: this.homeSearchText, placeholder: '搜索' })
+                .cancelButton({ style: CancelButtonStyle.INVISIBLE })
+                .focusable(false)
+                .enableKeyboardOnFocus(false)
+                .searchIcon(new SymbolGlyphModifier($r('sys.symbol.magnifyingglass'))
+                  .fontColor([this.navSelected]).fontSize(16))
+                .placeholderColor($r('app.color.placeholder_text'))
+                .placeholderFont({ size: 16, weight: 600 })
+                .fontColor($r('app.color.placeholder_text'))
+                .textFont({ size: 16, weight: 600 })
+                .backgroundColor(Color.Transparent)
+                .borderRadius(22)
+                .layoutWeight(1)
+                .height(44)
+                .systemMaterial(topBarMaterial(true))
+                .onClick(() => {
+                  this.context.eventHub.emit(EVENT_TOP_SEARCH);
+                })
+            }
+            this.msgButton()
+            this.avatarButton()
+          }
+          .width('100%')
+          .padding({
+            left: 14,
+            right: 14 + this.titleButtonInset,
+          })
         }
-        this.msgButton()
-        this.avatarButton()
       }
       .width('100%')
-      .padding({
-        left: 14,
-        right: 14 + this.titleButtonInset,
-      })
       .opacity(this.homeHideTopBar && this.topBarCollapsed ? 0 : 1)
       // .animation() 只作用于它之前、上一个 .animation() 之后的属性，
       // 故透明度与高度可以各走一套节奏

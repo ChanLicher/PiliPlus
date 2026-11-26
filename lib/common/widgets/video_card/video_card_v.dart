@@ -46,7 +46,15 @@ class VideoCardV extends StatefulWidget {
   State<VideoCardV> createState() => _VideoCardVState();
 }
 
-class _VideoCardVState extends State<VideoCardV> {
+class _VideoCardVState extends State<VideoCardV>
+    with SingleTickerProviderStateMixin {
+  static const Cubic _enterCurve = Cubic(0.2, 0, 0, 1);
+
+  late final AnimationController _enterController;
+  late final Animation<double> _fadeAnim;
+  late final Animation<double> _scaleAnim;
+  final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
+
   BaseRcmdVideoItemModel get videoItem => widget.videoItem;
   VoidCallback? get onRemove => widget.onRemove;
 
@@ -70,6 +78,24 @@ class _VideoCardVState extends State<VideoCardV> {
   void initState() {
     super.initState();
     if (_enableHero) _heroTag = _makeHeroTag();
+    _enterController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    );
+    final curved = CurvedAnimation(
+      parent: _enterController,
+      curve: _enterCurve,
+    );
+    _fadeAnim = curved;
+    _scaleAnim = Tween<double>(begin: 0.94, end: 1.0).animate(curved);
+    _enterController.forward();
+  }
+
+  @override
+  void dispose() {
+    _enterController.dispose();
+    _pressed.dispose();
+    super.dispose();
   }
 
   @override
@@ -81,9 +107,14 @@ class _VideoCardVState extends State<VideoCardV> {
   @override
   void didUpdateWidget(covariant VideoCardV oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final itemChanged = !identical(oldWidget.videoItem, videoItem);
     if (widget.enableHeroTransition != oldWidget.enableHeroTransition ||
-        !identical(oldWidget.videoItem, videoItem)) {
+        itemChanged) {
       _heroTag = _enableHero ? _makeHeroTag() : null;
+    }
+    if (itemChanged) {
+      _pressed.value = false;
+      _enterController.forward(from: 0);
     }
   }
 
@@ -170,6 +201,7 @@ class _VideoCardVState extends State<VideoCardV> {
         onTap: onPushDetail,
         onLongPress: onLongPress,
         onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+        onHighlightChanged: (pressed) => _pressed.value = pressed,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -189,7 +221,7 @@ class _VideoCardVState extends State<VideoCardV> {
         child: card,
       );
     }
-    return Stack(
+    final contentStack = Stack(
       clipBehavior: Clip.none,
       children: [
         card,
@@ -206,6 +238,22 @@ class _VideoCardVState extends State<VideoCardV> {
             ),
           ),
       ],
+    );
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _pressed,
+          child: contentStack,
+          builder: (_, pressed, child) => AnimatedScale(
+            scale: pressed ? 0.965 : 1.0,
+            duration: Duration(milliseconds: pressed ? 110 : 220),
+            curve: pressed ? Curves.easeOutCubic : Curves.easeOutBack,
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 
