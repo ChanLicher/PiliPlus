@@ -16,7 +16,7 @@ import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:material_ui/material_ui.dart';
 
 // 视频卡片 - 水平布局
-class VideoCardH extends StatelessWidget {
+class VideoCardH extends StatefulWidget {
   const VideoCardH({
     super.key,
     required this.videoItem,
@@ -29,65 +29,184 @@ class VideoCardH extends StatelessWidget {
   final ValueChanged<int>? onViewLater;
   final VoidCallback? onRemove;
 
+  @override
+  State<VideoCardH> createState() => _VideoCardHState();
+}
+
+class _VideoCardHState extends State<VideoCardH>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _enterController;
+  late final Animation<double> _enterFade;
+  late final Animation<double> _enterScale;
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _enterController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    final curved = CurvedAnimation(
+      parent: _enterController,
+      curve: const Cubic(0.2, 0, 0, 1),
+    );
+    _enterFade = curved;
+    _enterScale = Tween<double>(begin: 0.97, end: 1.0).animate(curved);
+    _enterController.forward();
+  }
+
+  @override
+  void dispose() {
+    _enterController.dispose();
+    _hovered.dispose();
+    _pressed.dispose();
+    super.dispose();
+  }
+
   void onLongPress() => imageSaveDialog(
-    bvid: videoItem.bvid,
-    title: videoItem.title,
-    cover: videoItem.cover,
+    bvid: widget.videoItem.bvid,
+    title: widget.videoItem.title,
+    cover: widget.videoItem.cover,
   );
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      type: .transparency,
-      child: Stack(
-        clipBehavior: .none,
-        children: [
-          InkWell(
-            onLongPress: onLongPress,
-            onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-            onTap: onTap ?? () => pushVideoH(videoItem),
-            child: Padding(
-              padding: const .symmetric(
-                horizontal: Style.safeSpace,
-                vertical: 5,
-              ),
-              child: Row(
-                crossAxisAlignment: .start,
-                children: [
-                  AspectRatio(
-                    aspectRatio: Style.aspectRatio,
-                    child: _CoverBuilderH(
-                      cover: videoItem.cover,
-                      badge: videoItem.badge,
-                      duration: videoItem.duration,
-                      progress: videoItem.progress,
-                      colorScheme: theme.colorScheme,
-                    ),
+    final isDark = theme.brightness == Brightness.dark;
+    final videoItem = widget.videoItem;
+    const radius = BorderRadius.all(Radius.circular(14));
+
+    return FadeTransition(
+      opacity: _enterFade,
+      child: ScaleTransition(
+        scale: _enterScale,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Style.safeSpace - 2,
+            vertical: 3,
+          ),
+          child: MouseRegion(
+            onEnter: (_) => _hovered.value = true,
+            onExit: (_) => _hovered.value = false,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _hovered,
+              builder: (context, hovered, child) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: _pressed,
+                  builder: (context, pressed, _) {
+                    final double scale = pressed
+                        ? 0.98
+                        : (hovered ? 1.012 : 1.0);
+                    return AnimatedScale(
+                      scale: scale,
+                      duration: const Duration(milliseconds: 160),
+                      curve: const Cubic(0.2, 0, 0, 1),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        curve: const Cubic(0.2, 0, 0, 1),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(
+                                  alpha: hovered ? 0.085 : 0.055,
+                                )
+                              : Colors.white.withValues(
+                                  alpha: hovered ? 0.96 : 0.82,
+                                ),
+                          borderRadius: radius,
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(
+                                    alpha: hovered ? 0.16 : 0.09,
+                                  )
+                                : Colors.white.withValues(
+                                    alpha: hovered ? 0.98 : 0.88,
+                                  ),
+                            width: 0.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDark
+                                    ? (hovered ? 0.28 : 0.16)
+                                    : (hovered ? 0.085 : 0.04),
+                              ),
+                              blurRadius: hovered ? 16 : 10,
+                              offset: Offset(0, hovered ? 5 : 3),
+                            ),
+                          ],
+                        ),
+                        child: child,
+                      ),
+                    );
+                  },
+                );
+              },
+              child: ClipRRect(
+                borderRadius: radius,
+                child: Material(
+                  type: .transparency,
+                  child: Stack(
+                    clipBehavior: .none,
+                    children: [
+                      InkWell(
+                        borderRadius: radius,
+                        hoverColor: Colors.transparent,
+                        onHighlightChanged: (v) => _pressed.value = v,
+                        onLongPress: onLongPress,
+                        onSecondaryTap: PlatformUtils.isMobile
+                            ? null
+                            : onLongPress,
+                        onTap: widget.onTap ?? () => pushVideoH(videoItem),
+                        child: Padding(
+                          padding: const .symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: .start,
+                            children: [
+                              AspectRatio(
+                                aspectRatio: Style.aspectRatio,
+                                child: _CoverBuilderH(
+                                  cover: videoItem.cover,
+                                  badge: videoItem.badge,
+                                  duration: videoItem.duration,
+                                  progress: videoItem.progress,
+                                  colorScheme: theme.colorScheme,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              content(theme),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 2,
+                        right: 4,
+                        width: 29,
+                        height: 29,
+                        child: VideoPopupMenu(
+                          iconSize: 17,
+                          videoItem: videoItem,
+                          onRemove: widget.onRemove,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  content(theme),
-                ],
+                ),
               ),
             ),
           ),
-          Positioned(
-            bottom: 0,
-            right: 12,
-            width: 29,
-            height: 29,
-            child: VideoPopupMenu(
-              iconSize: 17,
-              videoItem: videoItem,
-              onRemove: onRemove,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget content(ThemeData theme) {
+    final videoItem = widget.videoItem;
     String pubdate = DateFormatUtils.dateFormat(videoItem.pubdate!);
     if (pubdate != '') pubdate += '  ';
     return Expanded(
