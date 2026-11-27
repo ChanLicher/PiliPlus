@@ -1,15 +1,16 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:PiliPlus/common/utils/status_bar_tap.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
 import 'package:easy_debounce/easy_throttle.dart';
-import 'package:flutter/animation.dart' show Curves;
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/widgets.dart'
     show
-        DragScrollActivity,
         GlobalKey,
+        IdleScrollActivity,
         ScrollActivity,
         ScrollContext,
         ScrollController,
@@ -142,38 +143,91 @@ class _SmoothWheelScrollPosition extends ScrollPositionWithSingleContext {
     super.debugLabel,
   });
 
+  /// 指数阻尼系数（越大跟手越快，越小惯性越绵长；13.5 接近桌面浏览器平滑滚动）
+  static const double _damping = 13.5;
+
+  Ticker? _wheelTicker;
+  Duration? _lastTickElapsed;
   double? _wheelTarget;
-  int _wheelLastMs = 0;
+
+  void _stopWheelTicker() {
+    if (_wheelTicker?.isActive ?? false) {
+      _wheelTicker!.stop();
+    }
+    _lastTickElapsed = null;
+    _wheelTarget = null;
+  }
+
+  void _onWheelTick(Duration elapsed) {
+    final target = _wheelTarget;
+    if (target == null || !hasPixels) {
+      _stopWheelTicker();
+      return;
+    }
+    final clampedTarget = target.clamp(minScrollExtent, maxScrollExtent);
+    _wheelTarget = clampedTarget;
+
+    final prev = _lastTickElapsed;
+    _lastTickElapsed = elapsed;
+    final dt = prev == null
+        ? 1 / 60.0
+        : ((elapsed - prev).inMicroseconds / 1000000.0).clamp(0.002, 0.05);
+
+    final diff = clampedTarget - pixels;
+    if (diff.abs() < 0.35) {
+      final finalPos = clampedTarget;
+      _stopWheelTicker();
+      if (finalPos != pixels) {
+        setPixels(finalPos);
+      }
+      return;
+    }
+
+    final factor = 1.0 - math.exp(-dt * _damping);
+    final next = (pixels + diff * factor).clamp(
+      minScrollExtent,
+      maxScrollExtent,
+    );
+    setPixels(next);
+  }
 
   @override
   void beginActivity(ScrollActivity? newActivity) {
-    if (newActivity is DragScrollActivity) {
-      _wheelTarget = null;
+    // 任何触屏拖拽、惯性甩滑或程序动画开始时立刻让位
+    if (newActivity != null && newActivity is! IdleScrollActivity) {
+      _stopWheelTicker();
     }
     super.beginActivity(newActivity);
   }
 
   @override
   void pointerScroll(double delta) {
-    if (delta == 0.0) return;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final base = (_wheelTarget != null && now - _wheelLastMs < 260)
-        ? _wheelTarget!
-        : pixels;
-    _wheelLastMs = now;
+    if (delta == 0.0 || !hasPixels) return;
+    if (activity != null && activity is! IdleScrollActivity) {
+      goIdle();
+    }
+    final base = _wheelTarget ?? pixels;
     final target = (base + delta * 1.15).clamp(
       minScrollExtent,
       maxScrollExtent,
     );
-    if ((target - pixels).abs() < 0.5) {
-      _wheelTarget = null;
+    if ((target - pixels).abs() < 0.35) {
+      _stopWheelTicker();
       return;
     }
     _wheelTarget = target;
-    animateTo(
-      target,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-    );
+    _wheelTicker ??= context.vsync.createTicker(_onWheelTick);
+    if (!_wheelTicker!.isActive) {
+      _lastTickElapsed = null;
+      _wheelTicker!.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopWheelTicker();
+    _wheelTicker?.dispose();
+    _wheelTicker = null;
+    super.dispose();
   }
 }
