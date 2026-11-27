@@ -404,6 +404,7 @@ class HeaderControlState extends State<HeaderControl>
         ),
       ),
     );
+    return margin != null ? Padding(padding: margin, child: card) : card;
   }
 
   /// 设置面板
