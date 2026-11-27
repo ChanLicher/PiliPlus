@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
@@ -47,7 +48,8 @@ class _SearchPgcItemState extends State<SearchPgcItem> {
     );
     const radius = BorderRadius.all(Radius.circular(16));
 
-    return RepaintBoundary(
+    return CardEnterMotion(
+      itemKey: item.seasonId,
       child: Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace - 2,

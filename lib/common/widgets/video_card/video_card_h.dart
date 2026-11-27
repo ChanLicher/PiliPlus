@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/models/common/badge_type.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
@@ -57,7 +58,8 @@ class _VideoCardHState extends State<VideoCardH> {
     final videoItem = widget.videoItem;
     const radius = BorderRadius.all(Radius.circular(14));
 
-    return RepaintBoundary(
+    return CardEnterMotion(
+      itemKey: videoItem.bvid ?? videoItem.aid,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: Style.safeSpace - 2,

@@ -1772,8 +1772,27 @@ class HeaderControlState extends State<HeaderControl>
       flexibleSpace: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 11),
-          PlayerBar(
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(20)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.34),
+                    borderRadius: const BorderRadius.all(Radius.circular(20)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: PlayerBar(
             left: Row(
               mainAxisSize: .min,
               children: [
@@ -2090,6 +2109,10 @@ class HeaderControlState extends State<HeaderControl>
               ],
             ),
             title: title,
+                  ),
+                ),
+              ),
+            ),
           ),
           if (showFSActionItem)
             Row(

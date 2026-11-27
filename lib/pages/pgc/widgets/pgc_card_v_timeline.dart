@@ -1,5 +1,6 @@
 import 'dart:ui' show PointerDeviceKind;
 
+import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
@@ -44,7 +45,8 @@ class _PgcCardVTimelineState extends State<PgcCardVTimeline> {
     final item = widget.item;
     const radius = BorderRadius.all(Radius.circular(14));
 
-    return RepaintBoundary(
+    return CardEnterMotion(
+      itemKey: item.episodeId ?? item.seasonId,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onHover: (event) {

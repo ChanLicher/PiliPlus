@@ -477,30 +477,19 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
   Widget followButton(BuildContext context) {
     return Obx(
       () {
-        int attr = introController.followStatus.value.attribute ?? 0;
-        return TextButton(
-          onPressed: () => introController.actionRelationMod(context),
-          style: TextButton.styleFrom(
-            tapTargetSize: .shrinkWrap,
-            visualDensity: const VisualDensity(vertical: -2.8),
-            foregroundColor: attr != 0
-                ? colorScheme.outline
-                : colorScheme.onSecondaryContainer,
-            backgroundColor: attr != 0
-                ? colorScheme.onInverseSurface
-                : colorScheme.secondaryContainer,
-          ),
-          child: Text(
-            switch (attr) {
-              1 => '悄悄关注',
-              2 => '已关注',
-              4 || 6 => '已互关',
-              128 => '已拉黑',
-              -10 => '特别关注',
-              _ => ' 关注 ',
-            },
-            style: const TextStyle(fontSize: 13),
-          ),
+        final int attr = introController.followStatus.value.attribute ?? 0;
+        final label = switch (attr) {
+          1 => '悄悄关注',
+          2 => '已关注',
+          4 || 6 => '已互关',
+          128 => '已拉黑',
+          -10 => '特别关注',
+          _ => ' 关注 ',
+        };
+        return _FollowGlassButton(
+          label: label,
+          followed: attr != 0,
+          onTap: () => introController.actionRelationMod(context),
         );
       },
     );
@@ -518,9 +507,15 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.045)
-            : Colors.black.withValues(alpha: 0.03),
+            ? Colors.white.withValues(alpha: 0.055)
+            : Colors.black.withValues(alpha: 0.032),
         borderRadius: const BorderRadius.all(Radius.circular(14)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.black.withValues(alpha: 0.055),
+          width: 0.8,
+        ),
       ),
       child: Row(
         crossAxisAlignment: .center,
@@ -1190,6 +1185,107 @@ class _AiGlassPillState extends State<_AiGlassPill> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FollowGlassButton extends StatefulWidget {
+  const _FollowGlassButton({
+    required this.label,
+    required this.followed,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool followed;
+  final VoidCallback onTap;
+
+  @override
+  State<_FollowGlassButton> createState() => _FollowGlassButtonState();
+}
+
+class _FollowGlassButtonState extends State<_FollowGlassButton> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    const radius = BorderRadius.all(Radius.circular(18));
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (event) {
+        if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+          _hovered.value = true;
+        }
+      },
+      onExit: (_) {
+        if (_hovered.value) _hovered.value = false;
+      },
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _hovered,
+        builder: (context, hovered, child) {
+          final Color bg = widget.followed
+              ? (isDark
+                    ? Colors.white.withValues(alpha: hovered ? 0.12 : 0.07)
+                    : Colors.black.withValues(alpha: hovered ? 0.075 : 0.045))
+              : colorScheme.primary.withValues(
+                  alpha: isDark
+                      ? (hovered ? 0.34 : 0.24)
+                      : (hovered ? 0.19 : 0.13),
+                );
+          final Color borderColor = widget.followed
+              ? (isDark
+                    ? Colors.white.withValues(alpha: hovered ? 0.18 : 0.11)
+                    : Colors.black.withValues(alpha: hovered ? 0.11 : 0.07))
+              : colorScheme.primary.withValues(
+                  alpha: isDark ? 0.45 : 0.28,
+                );
+          return AnimatedScale(
+            scale: hovered ? 1.04 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: const Cubic(0.2, 0, 0, 1),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: radius,
+                border: Border.all(color: borderColor, width: 0.85),
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          child: InkWell(
+            borderRadius: radius,
+            hoverColor: Colors.transparent,
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: widget.followed
+                      ? colorScheme.outline
+                      : (isDark ? Colors.white : colorScheme.primary),
+                ),
               ),
             ),
           ),

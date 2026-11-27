@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'dart:async';
 
 import 'package:PiliPlus/common/widgets/button/icon_button.dart';
@@ -136,38 +137,102 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = theme.brightness == Brightness.dark;
+    const inputRadius = BorderRadius.all(Radius.circular(24));
     return ViewSafeArea(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 450),
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            color: theme.colorScheme.surface,
+      child: Column(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: Get.back,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: inputRadius,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.42 : 0.16,
+                              ),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: inputRadius,
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(
+                                        0xFF1D1E22,
+                                      ).withValues(alpha: 0.78)
+                                    : Colors.white.withValues(alpha: 0.86),
+                                borderRadius: inputRadius,
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.16)
+                                      : Colors.white.withValues(alpha: 0.94),
+                                  width: 0.9,
+                                ),
+                              ),
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: _buildInputView(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildInputView(),
-              buildPanelContainer(Colors.transparent),
-            ],
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: buildPanelContainer(Colors.transparent),
           ),
-        ),
+        ],
       ),
     );
   }
 
   @override
-  Widget? get customPanel => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    decoration: BoxDecoration(
-      border: Border(
-        top: BorderSide(
-          color: theme.colorScheme.outline.withValues(alpha: 0.1),
-        ),
-      ),
-    ),
-    child: ListView(
+  Widget? get customPanel {
+    final isDark = theme.brightness == Brightness.dark;
+    const panelRadius = BorderRadius.all(Radius.circular(20));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: ClipRRect(
+        borderRadius: panelRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF1C1D21).withValues(alpha: 0.80)
+                  : Colors.white.withValues(alpha: 0.86),
+              borderRadius: panelRadius,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.14)
+                    : Colors.white.withValues(alpha: 0.94),
+                width: 0.9,
+              ),
+            ),
+            child: ListView(
       physics: platformClampingPhysics,
       padding: .only(
         top: 12,
@@ -224,7 +289,11 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
         ),
       ],
     ),
-  );
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildColorItem(Color color) {
     return GestureDetector(
@@ -285,9 +354,19 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _mode.value == mode
-                  ? theme.colorScheme.secondaryContainer
-                  : theme.colorScheme.onInverseSurface,
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  ? theme.colorScheme.primary.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.28 : 0.14,
+                    )
+                  : (theme.brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.04)),
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
+              border: Border.all(
+                color: _mode.value == mode
+                    ? theme.colorScheme.primary.withValues(alpha: 0.35)
+                    : Colors.transparent,
+                width: 0.8,
+              ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Text(
@@ -313,9 +392,19 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _fontSize.value == fontSize
-                  ? theme.colorScheme.secondaryContainer
-                  : theme.colorScheme.onInverseSurface,
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  ? theme.colorScheme.primary.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.28 : 0.14,
+                    )
+                  : (theme.brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.04)),
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
+              border: Border.all(
+                color: _fontSize.value == fontSize
+                    ? theme.colorScheme.primary.withValues(alpha: 0.35)
+                    : Colors.transparent,
+                width: 0.8,
+              ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Text(
@@ -334,14 +423,13 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
 
   Widget _buildInputView() {
     return Padding(
-      padding: const EdgeInsets.only(left: 8, top: 2, right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Row(
         children: [
           Obx(
             () {
               final isEmoji = panelType.value == PanelType.emoji;
               return iconButton(
-                tooltip: '弹幕样式',
                 iconSize: 24,
                 onPressed: () => updatePanelType(isEmoji ? .keyboard : .emoji),
                 icon: const Icon(Icons.text_format),
@@ -390,7 +478,6 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
           const SizedBox(width: 12),
           Obx(
             () => iconButton(
-              tooltip: '发送',
               iconSize: 22,
               iconColor: enablePublish.value
                   ? theme.colorScheme.primary

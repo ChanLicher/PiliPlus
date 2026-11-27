@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
@@ -43,7 +44,8 @@ class _SearchArticleItemState extends State<SearchArticleItem> {
       cover: item.imageUrls?.firstOrNull,
     );
 
-    return RepaintBoundary(
+    return CardEnterMotion(
+      itemKey: item.id,
       child: Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace - 2,

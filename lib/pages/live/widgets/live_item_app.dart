@@ -1,5 +1,6 @@
 import 'dart:ui' show PointerDeviceKind;
 
+import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
@@ -53,7 +54,8 @@ class _LiveCardVAppState extends State<LiveCardVApp> {
       cover: showFirstFrame ? item.systemCover : item.cover,
     );
 
-    return RepaintBoundary(
+    return CardEnterMotion(
+      itemKey: item.roomid,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onHover: (event) {

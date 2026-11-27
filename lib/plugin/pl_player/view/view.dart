@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter, PointerDeviceKind;
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -658,32 +659,19 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       BottomControlType.fit => Obx(
         () {
           final fit = plPlayerController.videoFit.value;
-          return PopupMenuButton<VideoFitType>(
-            tooltip: '画面比例',
-            requestFocus: false,
-            initialValue: fit,
-            color: Colors.black.withValues(alpha: 0.8),
-            itemBuilder: (context) {
-              return VideoFitType.values
-                  .map(
-                    (boxFit) => PopupMenuItem<VideoFitType>(
-                      height: 35,
-                      padding: const EdgeInsets.only(left: 30),
-                      value: boxFit,
-                      onTap: () => plPlayerController.toggleVideoFit(boxFit),
-                      child: Text(
-                        boxFit.desc,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList();
-            },
+          return _PlayerGlassPopupBtn<VideoFitType>(
+            selectedValue: fit,
+            items: VideoFitType.values
+                .map(
+                  (boxFit) => _PlayerGlassMenuOption<VideoFitType>(
+                    value: boxFit,
+                    label: boxFit.desc,
+                    onTap: () => plPlayerController.toggleVideoFit(boxFit),
+                  ),
+                )
+                .toList(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Text(
                 fit.desc,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -697,29 +685,19 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         () {
           final list = videoDetailController.languages.value;
           if (list != null && list.isNotEmpty) {
-            return PopupMenuButton<String>(
-              tooltip: '翻译',
-              requestFocus: false,
-              initialValue: videoDetailController.currLang.value,
-              onSelected: videoDetailController.setLanguage,
-              color: Colors.black.withValues(alpha: 0.8),
-              itemBuilder: (context) => [
-                const PopupMenuItem<String>(
-                  height: 35,
+            return _PlayerGlassPopupBtn<String>(
+              selectedValue: videoDetailController.currLang.value,
+              items: [
+                _PlayerGlassMenuOption<String>(
                   value: '',
-                  child: Text(
-                    "关闭翻译",
-                    style: TextStyle(color: Colors.white, fontSize: 13),
-                  ),
+                  label: '关闭翻译',
+                  onTap: () => videoDetailController.setLanguage(''),
                 ),
                 ...list.map(
-                  (e) => PopupMenuItem<String>(
-                    height: 35,
-                    value: e.lang,
-                    child: Text(
-                      e.title!,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                    ),
+                  (e) => _PlayerGlassMenuOption<String>(
+                    value: e.lang ?? '',
+                    label: e.title!,
+                    onTap: () => videoDetailController.setLanguage(e.lang!),
                   ),
                 ),
               ],
@@ -743,40 +721,22 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         () {
           if (videoDetailController.subtitles.isNotEmpty) {
             final val = videoDetailController.vttSubtitlesIndex.value;
-            return PopupMenuButton<int>(
-              tooltip: '字幕',
-              requestFocus: false,
-              initialValue: val,
-              color: Colors.black.withValues(alpha: 0.8),
-              itemBuilder: (context) {
-                return [
-                  PopupMenuItem<int>(
-                    value: 0,
-                    height: 35,
-                    onTap: () => videoDetailController.setSubtitle(0),
-                    child: const Text(
-                      "关闭字幕",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                      ),
-                    ),
+            return _PlayerGlassPopupBtn<int>(
+              selectedValue: val,
+              items: [
+                _PlayerGlassMenuOption<int>(
+                  value: 0,
+                  label: '关闭字幕',
+                  onTap: () => videoDetailController.setSubtitle(0),
+                ),
+                ...videoDetailController.subtitles.mapIndexed(
+                  (i, e) => _PlayerGlassMenuOption<int>(
+                    value: i + 1,
+                    label: e.lanDoc ?? e.lan,
+                    onTap: () => videoDetailController.setSubtitle(i + 1),
                   ),
-                  ...videoDetailController.subtitles.mapIndexed((i, e) {
-                    return PopupMenuItem<int>(
-                      value: i + 1,
-                      height: 35,
-                      onTap: () => videoDetailController.setSubtitle(i + 1),
-                      child: Text(
-                        e.lanDoc ?? e.lan,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const .new(color: Colors.white, fontSize: 13),
-                      ),
-                    );
-                  }),
-                ];
-              },
+                ),
+              ],
               child: SizedBox(
                 width: widgetWidth,
                 height: 30,
@@ -800,30 +760,19 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
       /// 播放速度
       BottomControlType.speed => Obx(
-        () => PopupMenuButton<double>(
-          tooltip: '倍速',
-          requestFocus: false,
-          initialValue: plPlayerController.playbackSpeed,
-          color: Colors.black.withValues(alpha: 0.8),
-          itemBuilder: (context) {
-            return plPlayerController.speedList
-                .map(
-                  (double speed) => PopupMenuItem<double>(
-                    height: 35,
-                    padding: const EdgeInsets.only(left: 30),
-                    value: speed,
-                    onTap: () => plPlayerController.setPlaybackSpeed(speed),
-                    child: Text(
-                      "${speed}X",
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      semanticsLabel: "$speed倍速",
-                    ),
-                  ),
-                )
-                .toList();
-          },
+        () => _PlayerGlassPopupBtn<double>(
+          selectedValue: plPlayerController.playbackSpeed,
+          items: plPlayerController.speedList
+              .map(
+                (double speed) => _PlayerGlassMenuOption<double>(
+                  value: speed,
+                  label: '${speed}X',
+                  onTap: () => plPlayerController.setPlaybackSpeed(speed),
+                ),
+              )
+              .toList(),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Text(
               "${plPlayerController.playbackSpeed}X",
               style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -846,60 +795,44 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           }
           final videoFormat = videoInfo.supportFormats!;
           final availableQa = videoInfo.dash!.video!.availableVideoQualities;
-          return PopupMenuButton<int>(
-            tooltip: '画质',
-            requestFocus: false,
-            initialValue: currentVideoQa.code,
-            color: Colors.black.withValues(alpha: 0.8),
-            itemBuilder: (context) {
-              return List.generate(
-                videoFormat.length,
-                (index) {
-                  final item = videoFormat[index];
-                  final enabled = availableQa.contains(item.quality);
-                  return PopupMenuItem<int>(
-                    enabled: enabled,
-                    height: 35,
-                    padding: const EdgeInsets.only(left: 15, right: 10),
-                    value: item.quality,
-                    onTap: () async {
-                      if (currentVideoQa.code == item.quality) {
-                        return;
-                      }
-                      final int quality = item.quality!;
-                      final newQa = VideoQuality.fromCode(quality);
-                      videoDetailController
-                        ..plPlayerController.cacheVideoQa = newQa.code
-                        ..currentVideoQa.value = newQa
-                        ..updatePlayer();
+          return _PlayerGlassPopupBtn<int>(
+            selectedValue: currentVideoQa.code,
+            items: List.generate(
+              videoFormat.length,
+              (index) {
+                final item = videoFormat[index];
+                final enabled = availableQa.contains(item.quality);
+                return _PlayerGlassMenuOption<int>(
+                  value: item.quality ?? -1,
+                  label: item.newDesc ?? item.quality.toString(),
+                  enabled: enabled,
+                  onTap: () async {
+                    if (currentVideoQa.code == item.quality) {
+                      return;
+                    }
+                    final int quality = item.quality!;
+                    final newQa = VideoQuality.fromCode(quality);
+                    videoDetailController
+                      ..plPlayerController.cacheVideoQa = newQa.code
+                      ..currentVideoQa.value = newQa
+                      ..updatePlayer();
 
-                      SmartDialog.showToast("画质已变为：${newQa.desc}");
+                    SmartDialog.showToast("画质已变为：${newQa.desc}");
 
-                      // update
-                      if (!plPlayerController.tempPlayerConf) {
-                        GStorage.setting.put(
-                          await ConnectivityUtils.isWiFi
-                              ? SettingBoxKey.defaultVideoQa
-                              : SettingBoxKey.defaultVideoQaCellular,
-                          quality,
-                        );
-                      }
-                    },
-                    child: Text(
-                      item.newDesc ?? item.quality.toString(),
-                      style: enabled
-                          ? const TextStyle(color: Colors.white, fontSize: 13)
-                          : const TextStyle(
-                              color: Color(0x62FFFFFF),
-                              fontSize: 13,
-                            ),
-                    ),
-                  );
-                },
-              );
-            },
+                    if (!plPlayerController.tempPlayerConf) {
+                      GStorage.setting.put(
+                        await ConnectivityUtils.isWiFi
+                            ? SettingBoxKey.defaultVideoQa
+                            : SettingBoxKey.defaultVideoQaCellular,
+                        quality,
+                      );
+                    }
+                  },
+                );
+              },
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Text(
                 currentVideoQa.shortDesc,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -2508,5 +2441,391 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         ),
       ),
     );
+  }
+}
+
+class _PlayerGlassMenuOption<T> {
+  const _PlayerGlassMenuOption({
+    required this.value,
+    required this.label,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final T value;
+  final String label;
+  final VoidCallback onTap;
+  final bool enabled;
+}
+
+class _PlayerGlassPopupBtn<T> extends StatefulWidget {
+  const _PlayerGlassPopupBtn({
+    required this.selectedValue,
+    required this.items,
+    required this.child,
+  });
+
+  final T? selectedValue;
+  final List<_PlayerGlassMenuOption<T>> items;
+  final Widget child;
+
+  @override
+  State<_PlayerGlassPopupBtn<T>> createState() =>
+      _PlayerGlassPopupBtnState<T>();
+}
+
+class _PlayerGlassPopupBtnState<T> extends State<_PlayerGlassPopupBtn<T>> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    _pressed.dispose();
+    super.dispose();
+  }
+
+  void _openMenu() {
+    final RenderBox? button = context.findRenderObject() as RenderBox?;
+    final OverlayState overlayState = Overlay.of(context, rootOverlay: true);
+    final RenderBox? overlay =
+        overlayState.context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+
+    final Offset topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Rect anchorRect = topLeft & button.size;
+
+    late final OverlayEntry entry;
+    bool removed = false;
+    void removeEntry() {
+      if (removed) return;
+      removed = true;
+      entry.remove();
+    }
+
+    entry = OverlayEntry(
+      builder: (_) => _PlayerGlassMenuOverlay<T>(
+        anchorRect: anchorRect,
+        selectedValue: widget.selectedValue,
+        items: widget.items,
+        onRemoved: removeEntry,
+      ),
+    );
+    overlayState.insert(entry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (event) {
+        if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+          _hovered.value = true;
+        }
+      },
+      onExit: (_) {
+        if (_hovered.value) _hovered.value = false;
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _openMenu,
+        onTapDown: (_) => _pressed.value = true,
+        onTapUp: (_) => _pressed.value = false,
+        onTapCancel: () => _pressed.value = false,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _hovered,
+          builder: (context, hovered, child) {
+            return ValueListenableBuilder<bool>(
+              valueListenable: _pressed,
+              builder: (context, pressed, _) {
+                final scale = pressed ? 0.94 : (hovered ? 1.06 : 1.0);
+                return AnimatedScale(
+                  scale: scale,
+                  duration: const Duration(milliseconds: 130),
+                  curve: const Cubic(0.2, 0, 0, 1),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: pressed
+                          ? Colors.white.withValues(alpha: 0.24)
+                          : hovered
+                          ? Colors.white.withValues(alpha: 0.16)
+                          : Colors.transparent,
+                      borderRadius: const BorderRadius.all(
+                        Radius.circular(12),
+                      ),
+                    ),
+                    child: child,
+                  ),
+                );
+              },
+            );
+          },
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerGlassMenuOverlay<T> extends StatefulWidget {
+  const _PlayerGlassMenuOverlay({
+    required this.anchorRect,
+    required this.selectedValue,
+    required this.items,
+    required this.onRemoved,
+  });
+
+  final Rect anchorRect;
+  final T? selectedValue;
+  final List<_PlayerGlassMenuOption<T>> items;
+  final VoidCallback onRemoved;
+
+  @override
+  State<_PlayerGlassMenuOverlay<T>> createState() =>
+      _PlayerGlassMenuOverlayState<T>();
+}
+
+class _PlayerGlassMenuOverlayState<T> extends State<_PlayerGlassMenuOverlay<T>>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _curved;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 170),
+      reverseDuration: const Duration(milliseconds: 120),
+    );
+    _curved = CurvedAnimation(
+      parent: _controller,
+      curve: const Cubic(0.2, 0, 0, 1),
+      reverseCurve: Curves.easeIn,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _dismissImmediately() {
+    if (_closing) return;
+    _closing = true;
+    widget.onRemoved();
+  }
+
+  Future<void> _dismiss() async {
+    if (_closing) return;
+    _closing = true;
+    await _controller.reverse();
+    widget.onRemoved();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    const itemHeight = 36.0;
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _dismiss,
+            onSecondaryTap: _dismiss,
+            child: const SizedBox.expand(),
+          ),
+        ),
+        CustomSingleChildLayout(
+          delegate: _PlayerGlassMenuDelegate(
+            anchorRect: widget.anchorRect,
+            safePadding: mediaQuery.padding,
+          ),
+          child: FadeTransition(
+            opacity: _curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.92, end: 1.0).animate(_curved),
+              alignment: Alignment.bottomCenter,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1B1F).withValues(alpha: 0.72),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(16),
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          width: 0.9,
+                        ),
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 112,
+                          maxWidth: 220,
+                          maxHeight: 320,
+                        ),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(6),
+                          child: IntrinsicWidth(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: widget.items.map((opt) {
+                                final isSelected =
+                                    opt.value == widget.selectedValue;
+                                return Material(
+                                  type: MaterialType.transparency,
+                                  child: InkWell(
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.circular(10),
+                                    ),
+                                    hoverColor: Colors.white.withValues(
+                                      alpha: 0.10,
+                                    ),
+                                    splashColor: Colors.white.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    onTap: opt.enabled
+                                        ? () {
+                                            _dismissImmediately();
+                                            opt.onTap();
+                                          }
+                                        : null,
+                                    child: Container(
+                                      height: itemHeight,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      decoration: isSelected
+                                          ? BoxDecoration(
+                                              color: primary.withValues(
+                                                alpha: 0.22,
+                                              ),
+                                              borderRadius:
+                                                  const BorderRadius.all(
+                                                    Radius.circular(10),
+                                                  ),
+                                            )
+                                          : null,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              opt.label,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w400,
+                                                color: !opt.enabled
+                                                    ? const Color(0x62FFFFFF)
+                                                    : isSelected
+                                                    ? Colors.white
+                                                    : Colors.white.withValues(
+                                                        alpha: 0.88,
+                                                      ),
+                                              ),
+                                            ),
+                                          ),
+                                          if (isSelected) ...[
+                                            const SizedBox(width: 8),
+                                            Icon(
+                                              Icons.check_rounded,
+                                              size: 15,
+                                              color: primary,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerGlassMenuDelegate extends SingleChildLayoutDelegate {
+  _PlayerGlassMenuDelegate({
+    required this.anchorRect,
+    required this.safePadding,
+  });
+
+  final Rect anchorRect;
+  final EdgeInsets safePadding;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final maxWidth = (constraints.maxWidth - 20).clamp(112.0, 240.0);
+    final maxHeight =
+        (constraints.maxHeight - safePadding.top - safePadding.bottom - 24)
+            .clamp(80.0, 340.0);
+    return BoxConstraints.loose(Size(maxWidth, maxHeight));
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    const double edgeMargin = 10.0;
+    double x = anchorRect.center.dx - childSize.width / 2;
+    x = x.clamp(
+      safePadding.left + edgeMargin,
+      (size.width - safePadding.right - childSize.width - edgeMargin).clamp(
+        safePadding.left + edgeMargin,
+        size.width,
+      ),
+    );
+    double y = anchorRect.top - childSize.height - 8;
+    if (y < safePadding.top + edgeMargin) {
+      y = anchorRect.bottom + 8;
+    }
+    y = y.clamp(
+      safePadding.top + edgeMargin,
+      (size.height - safePadding.bottom - childSize.height - edgeMargin).clamp(
+        safePadding.top + edgeMargin,
+        size.height,
+      ),
+    );
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(_PlayerGlassMenuDelegate oldDelegate) {
+    return anchorRect != oldDelegate.anchorRect ||
+        safePadding != oldDelegate.safePadding;
   }
 }

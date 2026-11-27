@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
@@ -39,7 +40,8 @@ class _LiveItemState extends State<LiveItem> {
       cover: liveItem.cover,
     );
 
-    return RepaintBoundary(
+    return CardEnterMotion(
+      itemKey: liveItem.roomid,
       child: MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => _hovered.value = true,

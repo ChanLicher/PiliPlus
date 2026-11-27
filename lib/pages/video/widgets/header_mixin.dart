@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 ﻿import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/pages/video/introduction/ugc/widgets/menu_row.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
@@ -162,13 +164,43 @@ mixin HeaderMixin<T extends StatefulWidget> on State<T> {
           setOptions();
         }
 
+        final isDark = theme.brightness == Brightness.dark;
+        const sheetRadius = BorderRadius.all(Radius.circular(20));
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Material(
-            clipBehavior: Clip.hardEdge,
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            child: Padding(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: sheetRadius,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.14),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: sheetRadius,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1C1D21).withValues(alpha: 0.80)
+                        : Colors.white.withValues(alpha: 0.86),
+                    borderRadius: sheetRadius,
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : Colors.white.withValues(alpha: 0.94),
+                      width: 0.9,
+                    ),
+                  ),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    clipBehavior: Clip.hardEdge,
+                    borderRadius: sheetRadius,
+                    child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: ListView(
                 padding: EdgeInsets.zero,
@@ -525,6 +557,10 @@ mixin HeaderMixin<T extends StatefulWidget> on State<T> {
                     ),
                   ),
                 ],
+              ),
+            ),
+                  ),
+                ),
               ),
             ),
           ),
