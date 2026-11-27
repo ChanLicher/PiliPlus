@@ -460,7 +460,8 @@ class _VideoCardHeroState extends State<VideoCardHero> {
       reverseCurve: Curves.linear,
       transitionOnUserGestures: true,
       flightShuttleBuilder: _buildFlightShuttle,
-      // 飞行期间原位显示卡片副本：进入时淡出、返回时淡入
+      // 飞行期间原位保留卡片本体：防止 Flutter Hero 默认挖空导致返回主页时被点击卡片短暂消失
+      placeholderBuilder: (_, _, child) => child,
       child: _CardSurface(
         radius: widget.cornerRadius,
         cardColor: widget.surfaceColor,
