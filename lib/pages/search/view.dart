@@ -1,5 +1,4 @@
 ﻿import 'dart:convert';
-import 'dart:ui' show ImageFilter;
 
 import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
 import 'package:PiliPlus/common/widgets/disabled_icon.dart';
@@ -34,6 +33,7 @@ class _SearchPageState extends State<SearchPage> {
   late EdgeInsets padding;
 
   final ScrollController _scrollController = SmoothWheelScrollController();
+  bool _focusScheduled = false;
 
   @override
   void initState() {
@@ -47,12 +47,35 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
+  void _scheduleFocusAfterTransition() {
+    if (_focusScheduled) return;
+    _focusScheduled = true;
+    final anim = ModalRoute.of(context)?.animation;
+    if (anim == null || anim.status == AnimationStatus.completed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchController.searchFocusNode.requestFocus();
+      });
+      return;
+    }
+    void onStatus(AnimationStatus status) {
+      if (status == AnimationStatus.completed) {
+        anim.removeStatusListener(onStatus);
+        if (mounted) {
+          _searchController.searchFocusNode.requestFocus();
+        }
+      }
+    }
+
+    anim.addStatusListener(onStatus);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     theme = Theme.of(context);
     padding = MediaQuery.viewPaddingOf(context);
     isPortrait = MediaQuery.sizeOf(context).isPortrait;
+    _scheduleFocusAfterTransition();
   }
 
   @override
@@ -141,38 +164,43 @@ class _SearchPageState extends State<SearchPage> {
     EdgeInsetsGeometry? padding,
   }) {
     final isDark = theme.brightness == Brightness.dark;
-    final baseColor = isDark
-        ? Colors.white.withValues(alpha: 0.07)
-        : Colors.white.withValues(alpha: 0.72);
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.85);
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+    final radius = BorderRadius.circular(borderRadius);
+    return RepaintBoundary(
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [
+                    Colors.white.withValues(alpha: 0.10),
+                    Colors.white.withValues(alpha: 0.06),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.92),
+                    Colors.white.withValues(alpha: 0.78),
+                  ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: baseColor,
-              borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(color: borderColor, width: 0.8),
+          borderRadius: radius,
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.14)
+                : Colors.white.withValues(alpha: 0.95),
+            width: 0.85,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.055),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: child,
-          ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: padding != null ? Padding(padding: padding, child: child) : child,
         ),
       ),
     );
@@ -227,7 +255,7 @@ class _SearchPageState extends State<SearchPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
-                      autofocus: true,
+                      autofocus: false,
                       focusNode: _searchController.searchFocusNode,
                       controller: _searchController.controller,
                       textInputAction: TextInputAction.search,
