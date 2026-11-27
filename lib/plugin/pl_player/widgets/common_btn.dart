@@ -39,9 +39,11 @@ class _ComBtnState extends State<ComBtn> {
 
   @override
   Widget build(BuildContext context) {
+    final isLarge = MediaQuery.sizeOf(context).shortestSide >= 600;
+    final double scaleFactor = isLarge ? 1.22 : 1.0;
     return SizedBox(
-      width: widget.width,
-      height: widget.height,
+      width: widget.width * scaleFactor,
+      height: widget.height * scaleFactor,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onHover: (event) {
@@ -88,7 +90,7 @@ class _ComBtnState extends State<ComBtn> {
                 },
               );
             },
-            child: widget.icon,
+            child: isLarge ? Transform.scale(scale: 1.15, child: widget.icon) : widget.icon,
           ),
         ),
       ),

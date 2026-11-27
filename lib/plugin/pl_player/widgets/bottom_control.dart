@@ -1,4 +1,4 @@
-import 'dart:ui' show ImageFilter;
+import 'dart:ui' show ImageFilter, PointerDeviceKind;
 
 import 'package:PiliPlus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
@@ -84,9 +84,18 @@ class BottomControl extends StatelessWidget {
         controller.showSeekPreview &&
         !controller.isFileSource;
 
-    return Padding(
-      padding: const .symmetric(horizontal: 10, vertical: 12),
-      child: Column(
+    final isLarge =
+        MediaQuery.sizeOf(context).shortestSide >= 600 || isFullScreen;
+    return MouseRegion(
+      onHover: (event) {
+        if (event.kind == PointerDeviceKind.mouse) {
+          controller.setControlsHovered(true);
+        }
+      },
+      onExit: (_) => controller.setControlsHovered(false),
+      child: Padding(
+        padding: const .symmetric(horizontal: 10, vertical: 12),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
@@ -160,7 +169,7 @@ class BottomControl extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: isLarge ? 8 : 6, vertical: isLarge ? 4 : 2),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.34),
                   borderRadius: const BorderRadius.all(Radius.circular(20)),
@@ -174,6 +183,7 @@ class BottomControl extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

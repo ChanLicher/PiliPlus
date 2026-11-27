@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'dart:async';
 import 'dart:math';
 
@@ -250,79 +251,165 @@ class _PostPanelState extends State<PostPanel>
 
   @override
   Widget buildPage() {
-    return SimpleScaffold(
-      appBar: AppBar(
-        primary: false,
-        toolbarHeight: 45,
-        automaticallyImplyLeading: false,
-        titleSpacing: 16,
-        title: const Text('提交片段'),
-        actions: [
-          iconButton(
-            size: 32,
-            context: context,
-            tooltip: '添加片段',
-            onPressed: () {
-              setState(() {
-                list.insert(
-                  0,
-                  PostSegmentModel(
-                    segment: Pair(
-                      first: 0,
-                      second: currentPos(),
-                    ),
-                    category: SegmentType.sponsor,
-                    actionType: ActionType.skip,
-                  ),
-                );
-              });
-            },
-            icon: const Icon(Icons.add),
-          ),
-          const SizedBox(width: 10),
-          iconButton(
-            size: 32,
-            context: context,
-            tooltip: '关闭',
-            onPressed: Get.back,
-            icon: const Icon(Icons.close),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: enableSlide ? slideList() : buildList(),
-      fab: list.isEmpty
-          ? null
-          : Padding(
-              padding: .only(
-                right: kFloatingActionButtonMargin,
-                bottom: kFloatingActionButtonMargin +
-                    MediaQuery.viewPaddingOf(context).bottom,
+    final isDark = theme.brightness == Brightness.dark;
+    const sheetRadius = BorderRadius.all(Radius.circular(20));
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: sheetRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.14),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: sheetRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1C1D21).withValues(alpha: 0.80)
+                    : Colors.white.withValues(alpha: 0.86),
+                borderRadius: sheetRadius,
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.14)
+                      : Colors.white.withValues(alpha: 0.94),
+                  width: 0.9,
+                ),
               ),
-              child: FloatingActionButton(
-                tooltip: '提交',
-                onPressed: () => showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('确定无误再提交'),
-                    actions: [
-                      TextButton(
-                        onPressed: Get.back,
-                        child: Text(
-                          '取消',
-                          style: TextStyle(color: theme.colorScheme.outline),
+              child: Material(
+                type: MaterialType.transparency,
+                clipBehavior: Clip.hardEdge,
+                borderRadius: sheetRadius,
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.10,
+                                ),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Text(
+                                '提交片段',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const Spacer(),
+                              iconButton(
+                                size: 32,
+                                context: context,
+                                onPressed: () {
+                                  setState(() {
+                                    list.insert(
+                                      0,
+                                      PostSegmentModel(
+                                        segment: Pair(
+                                          first: 0,
+                                          second: currentPos(),
+                                        ),
+                                        category: SegmentType.sponsor,
+                                        actionType: ActionType.skip,
+                                      ),
+                                    );
+                                  });
+                                },
+                                icon: const Icon(Icons.add),
+                              ),
+                              const SizedBox(width: 8),
+                              iconButton(
+                                size: 32,
+                                context: context,
+                                onPressed: Get.back,
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: enableSlide ? slideList() : buildList(),
+                        ),
+                      ],
+                    ),
+                    if (list.isNotEmpty)
+                      Positioned(
+                        right: 16,
+                        bottom: 16 + MediaQuery.viewPaddingOf(context).bottom,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.35,
+                                ),
+                                blurRadius: 14,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('确定无误再提交'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: Get.back,
+                                      child: Text(
+                                        '取消',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.outline,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: _onPost,
+                                      child: const Text('确定提交'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Icon(
+                                  Icons.check,
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      TextButton(
-                        onPressed: _onPost,
-                        child: const Text('确定提交'),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-                child: const Icon(Icons.check),
               ),
             ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -386,8 +473,16 @@ class _PostPanelState extends State<PostPanel>
           ),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.onInverseSurface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            color: theme.brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.035),
+            borderRadius: const BorderRadius.all(Radius.circular(14)),
+            border: Border.all(
+              color: theme.brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.11)
+                  : Colors.black.withValues(alpha: 0.06),
+              width: 0.8,
+            ),
           ),
           child: Builder(
             builder: (context) => Column(

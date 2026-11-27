@@ -57,9 +57,10 @@ class PlayOrPauseButtonState extends State<PlayOrPauseButton>
 
   @override
   Widget build(BuildContext context) {
+    final isLarge = MediaQuery.sizeOf(context).shortestSide >= 600;
     return SizedBox(
-      width: 42,
-      height: 34,
+      width: isLarge ? 50 : 42,
+      height: isLarge ? 42 : 34,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onHover: (event) {
@@ -112,7 +113,7 @@ class PlayOrPauseButtonState extends State<PlayOrPauseButton>
                 progress: controller,
                 icon: AnimatedIcons.play_pause,
                 color: Colors.white,
-                size: 20,
+                size: isLarge ? 24 : 20,
               ),
             ),
           ),

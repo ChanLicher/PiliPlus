@@ -1826,12 +1826,25 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   }
 
   bool tripling = false;
+  bool hoveringControls = false;
+
+  void setControlsHovered(bool hovered) {
+    if (hoveringControls == hovered) return;
+    hoveringControls = hovered;
+    if (hovered) {
+      _timer?.cancel();
+      _timer = null;
+    } else if (showControls.value) {
+      hideTaskControls();
+    }
+  }
 
   /// 隐藏控制条
   void hideTaskControls() {
     _timer?.cancel();
+    if (hoveringControls) return;
     _timer = Timer(showControlDuration, () {
-      if (!isSeeking.value && !tripling) {
+      if (!isSeeking.value && !tripling && !hoveringControls) {
         controls = false;
       }
       _timer = null;
@@ -1912,6 +1925,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   set controls(bool visible) {
     showControls.value = visible;
+    if (!visible) {
+      hoveringControls = false;
+    }
     _timer?.cancel();
     if (visible) {
       hideTaskControls();

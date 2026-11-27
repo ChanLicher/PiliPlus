@@ -1,4 +1,4 @@
-import 'dart:ui' show ImageFilter;
+import 'dart:ui' show ImageFilter, PointerDeviceKind;
 import 'dart:async' show Timer;
 import 'dart:convert' show utf8;
 import 'dart:io' show Platform;
@@ -1700,6 +1700,10 @@ class HeaderControlState extends State<HeaderControl>
   @override
   Widget build(BuildContext context) {
     final isFullScreen = this.isFullScreen;
+    final isLarge =
+        MediaQuery.sizeOf(context).shortestSide >= 600 || isFullScreen;
+    final double btnWidth = isLarge ? 46.0 : 40.0;
+    final double btnHeight = isLarge ? 40.0 : 34.0;
     final isFSOrPip = isFullScreen || plPlayerController.isDesktopPip;
     final showFSActionItem =
         !isFileSource && plPlayerController.showFSActionItem && isFSOrPip;
@@ -1768,22 +1772,29 @@ class HeaderControlState extends State<HeaderControl>
       foregroundColor: Colors.white,
       primary: false,
       automaticallyImplyLeading: false,
-      toolbarHeight: showFSActionItem ? 112 : null,
+      toolbarHeight: showFSActionItem ? (isLarge ? 124 : 112) : (isLarge ? 58 : null),
       flexibleSpace: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(20)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
+            child: MouseRegion(
+              onHover: (event) {
+                if (event.kind == PointerDeviceKind.mouse) {
+                  plPlayerController.setControlsHovered(true);
+                }
+              },
+              onExit: (_) => plPlayerController.setControlsHovered(false),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(22)),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isLarge ? 8 : 6,
+                      vertical: isLarge ? 3 : 2,
+                    ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.34),
                     borderRadius: const BorderRadius.all(Radius.circular(20)),
@@ -1801,9 +1812,9 @@ class HeaderControlState extends State<HeaderControl>
                   height: btnHeight,
                   child: IconButton(
                     style: btnStyle,
-                    icon: const Icon(
+                    icon: Icon(
                       FontAwesomeIcons.arrowLeft,
-                      size: 15,
+                      size: isLarge ? 18 : 15,
                       color: Colors.white,
                     ),
                     onPressed: () =>
@@ -1894,9 +1905,9 @@ class HeaderControlState extends State<HeaderControl>
                       child: IconButton(
                         style: btnStyle,
                         onPressed: () => videoDetailCtr.onBlock(context),
-                        icon: const Icon(
+                        icon: Icon(
                           CustomIcons.shield_play_arrow,
-                          size: 20,
+                          size: isLarge ? 23 : 20,
                           color: Colors.white,
                         ),
                       ),
@@ -1975,8 +1986,8 @@ class HeaderControlState extends State<HeaderControl>
                   child: IconButton(
                     style: btnStyle,
                     onPressed: showSetDanmaku,
-                    icon: const Icon(
-                      size: 20,
+                    icon: Icon(
+                      size: isLarge ? 23 : 20,
                       CustomIcons.dm_settings,
                       color: Colors.white,
                     ),
@@ -2086,9 +2097,9 @@ class HeaderControlState extends State<HeaderControl>
                           }
                         }
                       },
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.picture_in_picture_outlined,
-                        size: 19,
+                        size: isLarge ? 22 : 19,
                         color: Colors.white,
                       ),
                     ),
@@ -2099,9 +2110,9 @@ class HeaderControlState extends State<HeaderControl>
                   child: IconButton(
                     style: btnStyle,
                     onPressed: showSettingSheet,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.more_vert_outlined,
-                      size: 19,
+                      size: isLarge ? 23 : 19,
                       color: Colors.white,
                     ),
                   ),
@@ -2112,6 +2123,7 @@ class HeaderControlState extends State<HeaderControl>
                   ),
                 ),
               ),
+            ),
             ),
           ),
           if (showFSActionItem)
