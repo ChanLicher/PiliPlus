@@ -377,8 +377,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
                           showConfirmDialog(
                             context: context,
                             title: const Text('是否加载全部评论以显示线程化评论？'),
-                            content: const Text('这将消耗一定流量
-且可能导致IP或账号风控'),
+                            content: const Text('这将消耗一定流量\n且可能导致IP或账号风控'),
                             onConfirm: controller.nextReplyRound,
                           );
                         }
