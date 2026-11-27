@@ -164,35 +164,40 @@ export class WindowState {
     await this.win.setSpecificSystemBarEnabled("navigationIndicator", !hidden, false);
   }
 
-  /// 应用窗口方向策略（五种，由 Dart 侧按「设备形态 + 页面类型 + 视频方向 +
+  /// 应用窗口方向策略（由 Dart 侧按「设备形态 + 页面类型 + 视频方向 +
   /// 是否全屏」决定）：
-  /// - `portraitOnly`：AUTO_ROTATION_PORTRAIT —— 仅竖向，不受旋转锁定控制，
-  ///   用于细长竖屏形态（portraitForm）的非播放页，以及手机竖屏播放形态
-  ///   （portraitPlayerForm）的竖屏视频（含全屏）。
-  /// - `userPortrait`：USER_ROTATION_PORTRAIT —— 临时旋转到竖屏，之后跟随
-  ///   传感器（受旋转锁定控制）。用于手机竖屏播放形态设备「横屏视频、非全屏」
-  ///   的播放页：进入播放页 / 退出全屏时先把窗口转回竖屏，避免横置手机直接
-  ///   横屏全屏、或退出全屏后又被「窗口横屏自动进全屏」拉回。
-  /// - `userLandscape`：USER_ROTATION_LANDSCAPE —— 临时旋转到横屏，之后跟随
-  ///   传感器（受旋转锁定控制）：锁关时转竖屏会跟回竖屏（用于自动退出全屏），
-  ///   锁开时保持横屏。用于手机竖屏播放形态设备的横屏视频全屏。
+  /// - `portraitFixed`：PORTRAIT —— 固定正向竖屏，不跟随传感器，也不允许反向
+  ///   竖屏（180°）。用于细长竖屏形态（portraitForm）的非播放页、手机竖屏
+  ///   播放形态（portraitPlayerForm）的竖屏视频。
+  ///   注意不要用 AUTO_ROTATION_PORTRAIT：它支持 portrait + reverse portrait，
+  ///   手机倒过来时整个应用会跟着转 180°。
+  /// - `userPortrait`：USER_ROTATION_PORTRAIT —— 先临时旋转到竖屏，之后跟随
+  ///   传感器。用于手机播放页横屏视频非全屏；退出全屏后保持该策略，等下一次
+  ///   传感器变化再跟随，不能立即补发自动旋转而把仍横置的设备拉回横屏。
+  /// - `systemDecided`：AUTO_ROTATION_UNSPECIFIED —— 跟随传感器，允许方向由
+  ///   系统决定（直板机不含 180° 反向竖屏）。用于锁关且进入全屏时已是横屏的
+  ///   场景：保留横屏两方向与正向竖屏，设备倒置时不会误退出全屏。
+  /// - `userLandscape`：USER_ROTATION_LANDSCAPE —— 先临时旋转到横屏，之后跟随
+  ///   传感器。用于手机从竖屏进入横屏视频全屏；窗口转横后仍保持该策略，等下一次
+  ///   传感器变化再跟随。直板机不含反向竖屏，前摄朝下时仍保持横屏全屏。
   /// - `landscapeOnly`：AUTO_ROTATION_LANDSCAPE —— 仅横向两方向、不受旋转
   ///   锁定控制，用于旋转锁定打开时的横屏视频全屏（180° 翻转可用，但窗口
   ///   不会转竖屏退出，只能点按钮）。
   /// - `follow`：AUTO_ROTATION_RESTRICTED —— 四方向跟随重力/智感，受旋转锁定
-  ///   控制，用于平板/2in1/横屏适配布局的折叠内屏，以及细长竖屏形态 / 宽屏
-  ///   手机的非播放页（不锁竖屏，仍可横屏）和全屏中窗口已是横屏的状态。
-  ///
-  /// 应用不再下发固定方向（PORTRAIT/LANDSCAPE），也不读取系统旋转锁。
+  ///   控制，用于平板/2in1/横屏适配布局的折叠内屏，以及宽屏手机的非播放页
+  ///   （不锁竖屏，仍可横屏）。
   async setWindowOrientation(policy: string): Promise<void> {
     this.win ??= await window.getLastWindow(getContext());
     let orientation: window.Orientation;
     switch (policy) {
-      case 'portraitOnly':
-        orientation = window.Orientation.AUTO_ROTATION_PORTRAIT;
+      case 'portraitFixed':
+        orientation = window.Orientation.PORTRAIT;
         break;
       case 'userPortrait':
         orientation = window.Orientation.USER_ROTATION_PORTRAIT;
+        break;
+      case 'systemDecided':
+        orientation = window.Orientation.AUTO_ROTATION_UNSPECIFIED;
         break;
       case 'userLandscape':
         orientation = window.Orientation.USER_ROTATION_LANDSCAPE;

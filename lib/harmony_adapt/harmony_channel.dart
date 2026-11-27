@@ -433,7 +433,9 @@ abstract class HarmonyChannel {
       _invoke('setFullScreenBars', {'fullscreen': fullscreen});
 
   /// 设置窗口方向策略，取值见 `HarmonyOrientationPolicy`：
-  /// `follow`（跟随系统）/ `portraitOnly`（仅竖屏）/ `landscapeOnly`（仅横屏）。
+  /// `follow`（跟随系统）/ `portraitFixed`（固定正向竖屏）/
+  /// `userPortrait`（临时竖屏后跟随）/ `systemDecided`（系统决定可转方向）/
+  /// `landscapeOnly`（仅横向两方向）/ `userLandscape`（临时横屏后跟随）。
   ///
   /// 应用侧只声明「这个状态允许哪些方向」，不写固定方向，也不读系统旋转锁。
   static Future<void> setWindowOrientation(String policy) async {
@@ -495,9 +497,9 @@ abstract class HarmonyChannel {
 
   /// 系统「自动旋转」开关是否开启（即旋转锁定是否关闭）。
   ///
-  /// 仅用于横屏视频全屏时选择方向策略：锁关用 `USER_ROTATION_LANDSCAPE`
-  /// （临时转横后四方向跟随，转竖屏可自动退全屏），锁开用
-  /// `AUTO_ROTATION_LANDSCAPE`（仅横向两方向、不受锁控制，可 180° 翻转）。
+  /// 仅用于横屏视频全屏时选择方向策略：锁关时，从竖屏进入用
+  /// `USER_ROTATION_LANDSCAPE`，已经横屏时用 `AUTO_ROTATION_UNSPECIFIED`；
+  /// 锁开用 `AUTO_ROTATION_LANDSCAPE`（仅横向两方向、不受锁控制，可 180° 翻转）。
   /// 读不到返回 null，调用方保持默认（按开启处理）。
   static Future<bool?> getAutoRotateEnabled() async {
     if (!OS.isHarmony) return null;
