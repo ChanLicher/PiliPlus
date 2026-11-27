@@ -1,6 +1,6 @@
 ﻿import 'dart:convert';
 import 'dart:ui' show ImageFilter;
-import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent;
+import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent, PointerSignalEvent;
 
 import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
 import 'package:PiliPlus/common/widgets/disabled_icon.dart';
