@@ -22,75 +22,90 @@ class SliverHotKeyword extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: HotKeywordView(
+        hotSearchList: hotSearchList,
+        onClick: onClick,
+      ),
+    );
+  }
+}
+
+class HotKeywordView extends StatelessWidget {
+  final List<SearchTrendingItemModel> hotSearchList;
+  final Function? onClick;
+  const HotKeywordView({
+    super.key,
+    required this.hotSearchList,
+    this.onClick,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     late final style = TextStyle(
-      fontSize: 14,
+      fontSize: 13,
       color: ColorScheme.of(context).outline,
     );
 
     late final cacheHeight = (MediaQuery.devicePixelRatioOf(context) * 15.0)
         .round();
 
-    return SliverToBoxAdapter(
-      child: _HotKeywordGrid(
-        mainAxisSpacing: 5,
-        crossAxisSpacing: 0.4,
-        crossAxisCount: 2,
-        children: hotSearchList
-            .map(
-              (i) => Material(
-                type: .transparency,
-                borderRadius: const .all(.circular(3)),
-                child: InkWell(
-                  borderRadius: const .all(.circular(3)),
-                  onTap: () => onClick?.call(i.keyword),
-                  child: Padding(
-                    padding: const .only(left: 2, right: 10),
-                    child: Tooltip(
-                      message: i.showName,
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Padding(
-                              padding: const .fromLTRB(6, 5, 0, 5),
-                              child: Text(
-                                i.showName,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                            ),
-                          ),
-                          if (!i.icon.isNullOrEmpty)
-                            Padding(
-                              padding: const .only(left: 4),
-                              child: CachedNetworkImage(
-                                height: 15,
-                                memCacheHeight: cacheHeight,
-                                imageUrl: ImageUtils.thumbnailUrl(i.icon!),
-                                placeholder: (_, _) => const SizedBox.shrink(),
-                              ),
-                            )
-                          else if (i.showLiveIcon == true)
-                            Padding(
-                              padding: const .only(left: 4),
-                              child: Image.asset(
-                                Assets.livingRect,
-                                width: 48,
-                                height: 15,
-                                cacheHeight: cacheHeight,
-                              ),
-                            )
-                          else if (i.recommendReason?.isNotEmpty == true)
-                            Text(i.recommendReason!, style: style),
-                        ],
+    return _HotKeywordGrid(
+      mainAxisSpacing: 6,
+      crossAxisSpacing: 6,
+      crossAxisCount: 2,
+      children: hotSearchList
+          .map(
+            (i) => Material(
+              type: .transparency,
+              borderRadius: const .all(.circular(12)),
+              child: InkWell(
+                borderRadius: const .all(.circular(12)),
+                onTap: () => onClick?.call(i.keyword),
+                child: Padding(
+                  padding: const .symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          i.showName,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
-                    ),
+                      if (!i.icon.isNullOrEmpty)
+                        Padding(
+                          padding: const .only(left: 4),
+                          child: CachedNetworkImage(
+                            height: 15,
+                            memCacheHeight: cacheHeight,
+                            imageUrl: ImageUtils.thumbnailUrl(i.icon!),
+                            placeholder: (_, _) => const SizedBox.shrink(),
+                          ),
+                        )
+                      else if (i.showLiveIcon == true)
+                        Padding(
+                          padding: const .only(left: 4),
+                          child: Image.asset(
+                            Assets.livingRect,
+                            width: 48,
+                            height: 15,
+                            cacheHeight: cacheHeight,
+                          ),
+                        )
+                      else if (i.recommendReason?.isNotEmpty == true)
+                        Padding(
+                          padding: const .only(left: 4),
+                          child: Text(i.recommendReason!, style: style),
+                        ),
+                    ],
                   ),
                 ),
               ),
-            )
-            .toList(),
-      ),
+            ),
+          )
+          .toList(),
     );
   }
 }

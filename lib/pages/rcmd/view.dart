@@ -10,7 +10,6 @@ import 'package:PiliPlus/pages/rcmd/controller.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent, PointerSignalEvent;
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
@@ -27,35 +26,6 @@ class _RcmdPageState extends State<RcmdPage>
   final controller = Get.put(RcmdController());
 
   Worker? _fillWorker;
-  double? _wheelTarget;
-  int _wheelLastMs = 0;
-
-  void _onPointerSignal(PointerSignalEvent event) {
-    if (event is! PointerScrollEvent) return;
-    final scrollController = controller.scrollController;
-    if (!scrollController.hasClients) return;
-    final dy = event.scrollDelta.dy;
-    if (dy == 0) return;
-    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
-      if (!mounted || !scrollController.hasClients) return;
-      final position = scrollController.position;
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final base = (_wheelTarget != null && now - _wheelLastMs < 260)
-          ? _wheelTarget!
-          : position.pixels;
-      _wheelLastMs = now;
-      final target = (base + dy * 1.15).clamp(
-        position.minScrollExtent,
-        position.maxScrollExtent,
-      );
-      _wheelTarget = target;
-      scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      );
-    });
-  }
 
   @override
   void initState() {
@@ -111,23 +81,19 @@ class _RcmdPageState extends State<RcmdPage>
       child: NativeTopRefreshIndicator(
         refreshKey: controller.refreshKey,
         onRefresh: controller.onRefresh,
-        child: Listener(
-          onPointerDown: (_) => _wheelTarget = null,
-          onPointerSignal: _onPointerSignal,
-          child: CustomScrollView(
-            controller: controller.scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              // 原生顶栏启用时顶部的可滚动留白（内容可滑入顶栏下方重合）
-              const NativeTopSpacer(),
-              SliverPadding(
-                padding: const .only(top: Style.cardSpace, bottom: 100),
-                sliver: Obx(
-                  () => _buildBody(colorScheme, controller.loadingState.value),
-                ),
+        child: CustomScrollView(
+          controller: controller.scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // 原生顶栏启用时顶部的可滚动留白（内容可滑入顶栏下方重合）
+            const NativeTopSpacer(),
+            SliverPadding(
+              padding: const .only(top: Style.cardSpace, bottom: 100),
+              sliver: Obx(
+                () => _buildBody(colorScheme, controller.loadingState.value),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,11 +1,10 @@
 ﻿import 'dart:convert';
 import 'dart:ui' show ImageFilter;
-import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent, PointerSignalEvent;
 
 import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
 import 'package:PiliPlus/common/widgets/disabled_icon.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/sliver_wrap.dart';
+import 'package:PiliPlus/pages/common/common_controller.dart'
+    show SmoothWheelScrollController;
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models_new/search/search_rcmd/data.dart';
 import 'package:PiliPlus/pages/search/controller.dart';
@@ -34,9 +33,7 @@ class _SearchPageState extends State<SearchPage> {
   late bool isPortrait;
   late EdgeInsets padding;
 
-  final ScrollController _scrollController = ScrollController();
-  double? _wheelTarget;
-  int _wheelLastMs = 0;
+  final ScrollController _scrollController = SmoothWheelScrollController();
 
   @override
   void initState() {
@@ -48,31 +45,6 @@ class _SearchPageState extends State<SearchPage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onPointerSignal(PointerSignalEvent event) {
-    if (event is! PointerScrollEvent || !_scrollController.hasClients) return;
-    final dy = event.scrollDelta.dy;
-    if (dy == 0) return;
-    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      final position = _scrollController.position;
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final base = (_wheelTarget != null && now - _wheelLastMs < 260)
-          ? _wheelTarget!
-          : position.pixels;
-      _wheelLastMs = now;
-      final target = (base + dy * 1.15).clamp(
-        position.minScrollExtent,
-        position.maxScrollExtent,
-      );
-      _wheelTarget = target;
-      _scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      );
-    });
   }
 
   @override
@@ -92,36 +64,37 @@ class _SearchPageState extends State<SearchPage> {
         ? _buildHotSearch(isTrending: false)
         : null;
 
+    final isDark = theme.brightness == Brightness.dark;
+    // 纯净中性底色：去掉 Material You 色偏，与透明毛玻璃胶囊质感保持一致
+    final pageBg = isDark ? const Color(0xFF0E0E10) : const Color(0xFFF5F6F8);
     final topBarHeight = padding.top + 68;
     return SimpleScaffold(
-      body: Stack(
+      body: ColoredBox(
+        color: pageBg,
+        child: Stack(
         children: [
           Padding(
             padding: .only(left: padding.left, right: padding.right),
-            child: Listener(
-              onPointerDown: (_) => _wheelTarget = null,
-              onPointerSignal: _onPointerSignal,
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  SliverToBoxAdapter(child: SizedBox(height: topBarHeight)),
-                  if (_searchController.searchSuggestion) _buildSearchSuggest(),
-                  if (isPortrait) ...[
-                    ?trending,
-                    _buildHistory,
-                    ?rcmd,
-                  ] else if (trending != null || rcmd != null)
-                    SliverCrossAxisGroup(
-                      slivers: [
-                        SliverMainAxisGroup(slivers: [?trending, ?rcmd]),
-                        _buildHistory,
-                      ],
-                    )
-                  else
-                    _buildHistory,
-                  SliverPadding(padding: .only(bottom: padding.bottom + 24)),
-                ],
-              ),
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                SliverToBoxAdapter(child: SizedBox(height: topBarHeight + 8)),
+                if (_searchController.searchSuggestion) _buildSearchSuggest(),
+                if (isPortrait) ...[
+                  ?trending,
+                  _buildHistory,
+                  ?rcmd,
+                ] else if (trending != null || rcmd != null)
+                  SliverCrossAxisGroup(
+                    slivers: [
+                      SliverMainAxisGroup(slivers: [?trending, ?rcmd]),
+                      _buildHistory,
+                    ],
+                  )
+                else
+                  _buildHistory,
+                SliverPadding(padding: .only(bottom: padding.bottom + 24)),
+              ],
             ),
           ),
           // 顶部渐进柔化衬底：内容滑入毛玻璃搜索栏下方时平滑过渡，无硬分界线
@@ -137,9 +110,9 @@ class _SearchPageState extends State<SearchPage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      theme.colorScheme.surface.withValues(alpha: 0.92),
-                      theme.colorScheme.surface.withValues(alpha: 0.65),
-                      theme.colorScheme.surface.withValues(alpha: 0.0),
+                      pageBg.withValues(alpha: 0.94),
+                      pageBg.withValues(alpha: 0.65),
+                      pageBg.withValues(alpha: 0.0),
                     ],
                     stops: const [0.0, 0.65, 1.0],
                   ),
@@ -155,6 +128,52 @@ class _SearchPageState extends State<SearchPage> {
             child: _buildFloatingGlassBar(),
           ),
         ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassContainer({
+    required Widget child,
+    double borderRadius = 22,
+    double? width,
+    double? height,
+    EdgeInsetsGeometry? padding,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    final baseColor = isDark
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.white.withValues(alpha: 0.72);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.white.withValues(alpha: 0.85);
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              color: baseColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(color: borderColor, width: 0.8),
+            ),
+            child: child,
+          ),
+        ),
       ),
     );
   }
@@ -163,43 +182,12 @@ class _SearchPageState extends State<SearchPage> {
     required Widget child,
     double height = 48,
     double? width,
-    Color? tintColor,
   }) {
-    final isDark = theme.brightness == Brightness.dark;
-    final baseColor = tintColor ??
-        (isDark
-            ? theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.62)
-            : theme.colorScheme.surface.withValues(alpha: 0.72));
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.14)
-        : Colors.white.withValues(alpha: 0.75);
-    return Container(
+    return _buildGlassContainer(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(height / 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(height / 2),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: baseColor,
-              borderRadius: BorderRadius.circular(height / 2),
-              border: Border.all(color: borderColor, width: 0.8),
-            ),
-            child: child,
-          ),
-        ),
-      ),
+      borderRadius: height / 2,
+      child: child,
     );
   }
 
@@ -213,7 +201,6 @@ class _SearchPageState extends State<SearchPage> {
           child: Material(
             type: MaterialType.transparency,
             child: IconButton(
-              tooltip: '返回',
               icon: Icon(
                 Icons.arrow_back_rounded,
                 size: 22,
@@ -257,7 +244,6 @@ class _SearchPageState extends State<SearchPage> {
                   Obx(
                     () => _searchController.showUidBtn.value
                         ? IconButton(
-                            tooltip: 'UID搜索用户',
                             icon: Icon(
                               Icons.person_outline,
                               size: 20,
@@ -270,7 +256,6 @@ class _SearchPageState extends State<SearchPage> {
                         : const SizedBox.shrink(),
                   ),
                   IconButton(
-                    tooltip: '清空',
                     icon: Icon(
                       Icons.close_rounded,
                       size: 20,
@@ -288,16 +273,14 @@ class _SearchPageState extends State<SearchPage> {
         _buildGlassPill(
           width: 48,
           height: 48,
-          tintColor: colorScheme.primary.withValues(alpha: 0.85),
           child: Material(
             type: MaterialType.transparency,
             child: IconButton(
-              tooltip: '搜索',
               onPressed: _searchController.submit,
               icon: Icon(
                 Icons.search_rounded,
                 size: 22,
-                color: colorScheme.onPrimary,
+                color: colorScheme.primary,
               ),
             ),
           ),
@@ -315,22 +298,9 @@ class _SearchPageState extends State<SearchPage> {
           ? SliverPadding(
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
               sliver: SliverToBoxAdapter(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHigh
-                            .withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: theme.colorScheme.outlineVariant
-                              .withValues(alpha: 0.25),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: Material(
+                child: _buildGlassContainer(
+                  borderRadius: 20,
+                  child: Material(
                         type: MaterialType.transparency,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -374,9 +344,7 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     ),
                   ),
-                ),
-              ),
-            )
+                )
           : const SliverToBoxAdapter();
     });
   }
@@ -400,20 +368,22 @@ class _SearchPageState extends State<SearchPage> {
       color: outline,
     );
     return SliverPadding(
-      padding: .fromLTRB(
-        10,
+      padding: EdgeInsets.fromLTRB(
+        14,
         !isTrending && (isPortrait || _searchController.enableTrending)
-            ? 4
-            : 25,
-        4,
-        25,
+            ? 6
+            : 12,
+        isPortrait ? 14 : 7,
+        12,
       ),
-      sliver: SliverMainAxisGroup(
-        slivers: [
-          SliverPadding(
-            padding: const .fromLTRB(6, 0, 6, 6),
-            sliver: SliverToBoxAdapter(
-              child: Row(
+      sliver: SliverToBoxAdapter(
+        child: _buildGlassContainer(
+          borderRadius: 22,
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 mainAxisAlignment: .spaceBetween,
                 children: [
                   isTrending
@@ -421,7 +391,7 @@ class _SearchPageState extends State<SearchPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             text,
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 10),
                             TextButton(
                               style: const ButtonStyle(
                                 visualDensity: .compact,
@@ -476,22 +446,22 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+              Obx(
+                () => _buildHotKey(
+                  isTrending
+                      ? _searchController.trendingState.value
+                      : _searchController.recommendData.value,
+                  isTrending,
+                ),
+              ),
+            ],
           ),
-          Obx(
-            () => _buildHotKey(
-              isTrending
-                  ? _searchController.trendingState.value
-                  : _searchController.recommendData.value,
-              isTrending,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  late final mainAxisExtent = 16 + MediaQuery.textScalerOf(context).scale(14);
   Widget get _buildHistory {
     return Obx(
       () {
@@ -501,22 +471,24 @@ class _SearchPageState extends State<SearchPage> {
         }
         final secondary = theme.colorScheme.secondary;
         return SliverPadding(
-          padding: .fromLTRB(
-            10,
+          padding: EdgeInsets.fromLTRB(
+            isPortrait ? 14 : 7,
             !isPortrait
-                ? 25
+                ? 12
                 : _searchController.enableTrending
-                ? 0
-                : 6,
-            6,
-            25,
+                ? 6
+                : 12,
+            14,
+            12,
           ),
-          sliver: SliverMainAxisGroup(
-            slivers: [
-              SliverPadding(
-                padding: const .fromLTRB(6, 0, 6, 6),
-                sliver: SliverToBoxAdapter(
-                  child: Row(
+          sliver: SliverToBoxAdapter(
+            child: _buildGlassContainer(
+              borderRadius: 22,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
                     children: [
                       Text(
                         '搜索历史',
@@ -551,29 +523,31 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     ],
                   ),
-                ),
-              ),
-              SliverFixedWrap(
-                mainAxisExtent: mainAxisExtent,
-                spacing: 8,
-                runSpacing: 8,
-                delegate: SliverChildBuilderDelegate(
-                  addAutomaticKeepAlives: false,
-                  addRepaintBoundaries: false,
-                  childCount: list.length,
-                  (context, index) => SearchText(
-                    text: list[index],
-                    onTap: _searchController.onClickKeyword,
-                    onLongPress: _searchController.onLongSelect,
-                    height: 1,
-                    maxLines: 1,
-                    fontSize: 14,
-                    overflow: .ellipsis,
-                    padding: const .fromLTRB(11, 8, 11, 0),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: list
+                        .map(
+                          (word) => SearchText(
+                            text: word,
+                            onTap: _searchController.onClickKeyword,
+                            onLongPress: _searchController.onLongSelect,
+                            height: 1.15,
+                            maxLines: 1,
+                            fontSize: 14,
+                            overflow: .ellipsis,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -641,18 +615,23 @@ class _SearchPageState extends State<SearchPage> {
   ) {
     return switch (loadingState) {
       Success(:final response) when (response.list?.isNotEmpty ?? false) =>
-        SliverHotKeyword(
+        HotKeywordView(
           hotSearchList: response.list!,
           onClick: _searchController.onClickKeyword,
         ),
-      Error(:final errMsg) => HttpError(
-        safeArea: false,
-        errMsg: errMsg,
-        onReload: isTrending
-            ? _searchController.queryTrendingList
-            : _searchController.queryRecommendList,
+      Error(:final errMsg) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: TextButton.icon(
+            onPressed: isTrending
+                ? _searchController.queryTrendingList
+                : _searchController.queryRecommendList,
+            icon: const Icon(Icons.refresh_outlined, size: 18),
+            label: Text(errMsg ?? '加载失败，点击重试'),
+          ),
+        ),
       ),
-      _ => const SliverToBoxAdapter(),
+      _ => const SizedBox.shrink(),
     };
   }
 }
