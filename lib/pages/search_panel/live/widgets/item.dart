@@ -39,7 +39,8 @@ class _LiveItemState extends State<LiveItem> {
       cover: liveItem.cover,
     );
 
-    return MouseRegion(
+    return RepaintBoundary(
+      child: MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => _hovered.value = true,
       onExit: (_) => _hovered.value = false,
@@ -54,9 +55,7 @@ class _LiveItemState extends State<LiveItem> {
                 scale: scale,
                 duration: const Duration(milliseconds: 160),
                 curve: const Cubic(0.2, 0, 0, 1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  curve: const Cubic(0.2, 0, 0, 1),
+                child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: isDark
                         ? Colors.white.withValues(
@@ -127,13 +126,9 @@ class _LiveItemState extends State<LiveItem> {
                               left: 0,
                               right: 0,
                               bottom: 0,
-                              child: AnimatedOpacity(
-                                opacity: 1,
-                                duration: const Duration(milliseconds: 200),
-                                child: liveStat(
-                                  liveItem.online,
-                                  liveItem.cateName,
-                                ),
+                              child: liveStat(
+                                liveItem.online,
+                                liveItem.cateName,
                               ),
                             ),
                           ],
@@ -147,6 +142,7 @@ class _LiveItemState extends State<LiveItem> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

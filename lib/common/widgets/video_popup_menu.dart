@@ -474,9 +474,11 @@ class _GlassVideoMenuOverlayState extends State<_GlassVideoMenuOverlay>
     return Stack(
       children: [
         Positioned.fill(
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) => _dismiss(),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _dismiss,
+            onSecondaryTap: _dismiss,
+            child: const SizedBox.expand(),
           ),
         ),
         CustomSingleChildLayout(

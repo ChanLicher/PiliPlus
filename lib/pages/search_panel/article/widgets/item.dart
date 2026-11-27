@@ -43,7 +43,8 @@ class _SearchArticleItemState extends State<SearchArticleItem> {
       cover: item.imageUrls?.firstOrNull,
     );
 
-    return Padding(
+    return RepaintBoundary(
+      child: Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace - 2,
         vertical: 3,
@@ -63,9 +64,7 @@ class _SearchArticleItemState extends State<SearchArticleItem> {
                   scale: scale,
                   duration: const Duration(milliseconds: 160),
                   curve: const Cubic(0.2, 0, 0, 1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    curve: const Cubic(0.2, 0, 0, 1),
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withValues(
@@ -186,6 +185,7 @@ class _SearchArticleItemState extends State<SearchArticleItem> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

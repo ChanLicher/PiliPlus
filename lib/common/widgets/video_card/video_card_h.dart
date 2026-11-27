@@ -33,33 +33,12 @@ class VideoCardH extends StatefulWidget {
   State<VideoCardH> createState() => _VideoCardHState();
 }
 
-class _VideoCardHState extends State<VideoCardH>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _enterController;
-  late final Animation<double> _enterFade;
-  late final Animation<double> _enterScale;
+class _VideoCardHState extends State<VideoCardH> {
   final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
 
   @override
-  void initState() {
-    super.initState();
-    _enterController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    final curved = CurvedAnimation(
-      parent: _enterController,
-      curve: const Cubic(0.2, 0, 0, 1),
-    );
-    _enterFade = curved;
-    _enterScale = Tween<double>(begin: 0.97, end: 1.0).animate(curved);
-    _enterController.forward();
-  }
-
-  @override
   void dispose() {
-    _enterController.dispose();
     _hovered.dispose();
     _pressed.dispose();
     super.dispose();
@@ -78,35 +57,30 @@ class _VideoCardHState extends State<VideoCardH>
     final videoItem = widget.videoItem;
     const radius = BorderRadius.all(Radius.circular(14));
 
-    return FadeTransition(
-      opacity: _enterFade,
-      child: ScaleTransition(
-        scale: _enterScale,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.safeSpace - 2,
-            vertical: 3,
-          ),
-          child: MouseRegion(
-            onEnter: (_) => _hovered.value = true,
-            onExit: (_) => _hovered.value = false,
-            child: ValueListenableBuilder<bool>(
-              valueListenable: _hovered,
-              builder: (context, hovered, child) {
-                return ValueListenableBuilder<bool>(
-                  valueListenable: _pressed,
-                  builder: (context, pressed, _) {
-                    final double scale = pressed
-                        ? 0.98
-                        : (hovered ? 1.012 : 1.0);
-                    return AnimatedScale(
-                      scale: scale,
-                      duration: const Duration(milliseconds: 160),
-                      curve: const Cubic(0.2, 0, 0, 1),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        curve: const Cubic(0.2, 0, 0, 1),
-                        decoration: BoxDecoration(
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace - 2,
+          vertical: 3,
+        ),
+        child: MouseRegion(
+          onEnter: (_) => _hovered.value = true,
+          onExit: (_) => _hovered.value = false,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _hovered,
+            builder: (context, hovered, child) {
+              return ValueListenableBuilder<bool>(
+                valueListenable: _pressed,
+                builder: (context, pressed, _) {
+                  final double scale = pressed
+                      ? 0.98
+                      : (hovered ? 1.012 : 1.0);
+                  return AnimatedScale(
+                    scale: scale,
+                    duration: const Duration(milliseconds: 150),
+                    curve: const Cubic(0.2, 0, 0, 1),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
                           color: isDark
                               ? Colors.white.withValues(
                                   alpha: hovered ? 0.085 : 0.055,
@@ -201,8 +175,7 @@ class _VideoCardHState extends State<VideoCardH>
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget content(ThemeData theme) {

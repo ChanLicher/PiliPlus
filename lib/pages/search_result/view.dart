@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
 import 'package:PiliPlus/common/widgets/view_safe_area.dart';
@@ -84,38 +82,43 @@ class _SearchResultPageState extends State<SearchResultPage>
     double? width,
     double? height,
   }) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(radius)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
+    final borderRadius = BorderRadius.all(Radius.circular(radius));
+    return RepaintBoundary(
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [
+                    Colors.white.withValues(alpha: 0.10),
+                    Colors.white.withValues(alpha: 0.06),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.92),
+                    Colors.white.withValues(alpha: 0.78),
+                  ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.all(Radius.circular(radius)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.white.withValues(alpha: 0.78),
-              borderRadius: BorderRadius.all(Radius.circular(radius)),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.13)
-                    : Colors.white.withValues(alpha: 0.90),
-                width: 0.85,
-              ),
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.14)
+                : Colors.white.withValues(alpha: 0.95),
+            width: 0.85,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.055),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: child,
-          ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: child,
         ),
       ),
     );
@@ -219,11 +222,13 @@ class _SearchResultPageState extends State<SearchResultPage>
                       ],
                     ),
                     const SizedBox(height: 10),
-                    _buildGlassBox(
-                      isDark: isDark,
-                      radius: 21,
-                      height: 42,
-                      child: TabBar(
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildGlassBox(
+                        isDark: isDark,
+                        radius: 21,
+                        height: 42,
+                        child: TabBar(
                         overlayColor: const WidgetStatePropertyAll(
                           Colors.transparent,
                         ),
@@ -299,6 +304,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                           }
                         },
                       ),
+                    ),
                     ),
                   ],
                 ),

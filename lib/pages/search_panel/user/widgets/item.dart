@@ -40,7 +40,8 @@ class _SearchUserItemState extends State<SearchUserItem> {
     );
     const radius = BorderRadius.all(Radius.circular(14));
 
-    return Padding(
+    return RepaintBoundary(
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -57,9 +58,7 @@ class _SearchUserItemState extends State<SearchUserItem> {
                   scale: scale,
                   duration: const Duration(milliseconds: 160),
                   curve: const Cubic(0.2, 0, 0, 1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    curve: const Cubic(0.2, 0, 0, 1),
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withValues(
@@ -169,6 +168,7 @@ class _SearchUserItemState extends State<SearchUserItem> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
