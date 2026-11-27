@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'dart:async' show Timer;
 import 'dart:convert' show utf8;
 import 'dart:io' show Platform;
@@ -362,6 +363,49 @@ class HeaderControlState extends State<HeaderControl>
     }
   }
 
+  Widget _glassSheetCard(ThemeData theme, {EdgeInsetsGeometry? margin, required Widget child}) {
+    final isDark = theme.brightness == Brightness.dark;
+    const radius = BorderRadius.all(Radius.circular(20));
+    Widget card = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.14),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF1C1D21).withValues(alpha: 0.80)
+                  : Colors.white.withValues(alpha: 0.86),
+              borderRadius: radius,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.14)
+                    : Colors.white.withValues(alpha: 0.94),
+                width: 0.9,
+              ),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              clipBehavior: Clip.hardEdge,
+              borderRadius: radius,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 设置面板
   void showSettingSheet() {
     showBottomSheet(
@@ -370,10 +414,8 @@ class HeaderControlState extends State<HeaderControl>
 
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Material(
-            clipBehavior: Clip.hardEdge,
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _glassSheetCard(
+            theme,
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 14),
               children: [
@@ -882,10 +924,8 @@ class HeaderControlState extends State<HeaderControl>
         final theme = Theme.of(context);
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Material(
-            clipBehavior: Clip.hardEdge,
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _glassSheetCard(
+            theme,
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -976,10 +1016,8 @@ class HeaderControlState extends State<HeaderControl>
         final theme = Theme.of(context);
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Material(
-            clipBehavior: Clip.hardEdge,
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _glassSheetCard(
+            theme,
             child: CustomScrollView(
               slivers: [
                 const SliverToBoxAdapter(
@@ -1065,10 +1103,8 @@ class HeaderControlState extends State<HeaderControl>
         final colorScheme = ColorScheme.of(context);
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Material(
-            clipBehavior: Clip.hardEdge,
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _glassSheetCard(
+            Theme.of(context),
             child: Column(
               children: [
                 const SizedBox(
@@ -1302,10 +1338,8 @@ class HeaderControlState extends State<HeaderControl>
 
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Material(
-            clipBehavior: Clip.hardEdge,
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _glassSheetCard(
+            theme,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: ListView(
@@ -1516,12 +1550,9 @@ class HeaderControlState extends State<HeaderControl>
     if (ctr == null) return;
     showBottomSheet((context, setState) {
       final theme = Theme.of(context);
-      return Container(
+      return _glassSheetCard(
+        theme,
         margin: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-        ),
         child: Column(
           children: [
             Container(
@@ -1651,7 +1682,19 @@ class HeaderControlState extends State<HeaderControl>
 
   static const btnWidth = 40.0;
   static const btnHeight = 34.0;
-  static const btnStyle = ButtonStyle(padding: WidgetStatePropertyAll(.zero));
+  static final btnStyle = ButtonStyle(
+    padding: const WidgetStatePropertyAll(.zero),
+    shape: const WidgetStatePropertyAll(CircleBorder()),
+    overlayColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.pressed)) {
+        return Colors.white.withValues(alpha: 0.24);
+      }
+      if (states.contains(WidgetState.hovered)) {
+        return Colors.white.withValues(alpha: 0.16);
+      }
+      return Colors.transparent;
+    }),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1737,7 +1780,6 @@ class HeaderControlState extends State<HeaderControl>
                   width: btnWidth,
                   height: btnHeight,
                   child: IconButton(
-                    tooltip: '返回',
                     style: btnStyle,
                     icon: const Icon(
                       FontAwesomeIcons.arrowLeft,
@@ -1754,7 +1796,6 @@ class HeaderControlState extends State<HeaderControl>
                     width: btnWidth,
                     height: btnHeight,
                     child: IconButton(
-                      tooltip: '返回主页',
                       style: btnStyle,
                       icon: const Icon(
                         FontAwesomeIcons.house,
@@ -1780,7 +1821,6 @@ class HeaderControlState extends State<HeaderControl>
                       height: btnHeight,
                       child: IconButton(
                         style: btnStyle,
-                        tooltip: '${isAlwaysOnTop ? '取消' : ''}置顶',
                         onPressed: () =>
                             plPlayerController.setAlwaysOnTop(!isAlwaysOnTop),
                         icon: isAlwaysOnTop
@@ -1804,7 +1844,6 @@ class HeaderControlState extends State<HeaderControl>
                         width: btnWidth,
                         height: btnHeight,
                         child: IconButton(
-                          tooltip: '听音频',
                           style: btnStyle,
                           onPressed: videoDetailCtr.toAudioPage,
                           icon: const Icon(
@@ -1818,7 +1857,6 @@ class HeaderControlState extends State<HeaderControl>
                       width: btnWidth,
                       height: btnHeight,
                       child: IconButton(
-                        tooltip: '投屏',
                         style: btnStyle,
                         onPressed: videoDetailCtr.onCast,
                         icon: const Icon(
@@ -1834,7 +1872,6 @@ class HeaderControlState extends State<HeaderControl>
                       width: btnWidth,
                       height: btnHeight,
                       child: IconButton(
-                        tooltip: '提交片段',
                         style: btnStyle,
                         onPressed: () => videoDetailCtr.onBlock(context),
                         icon: const Icon(
@@ -1852,7 +1889,6 @@ class HeaderControlState extends State<HeaderControl>
                             width: btnWidth,
                             height: btnHeight,
                             child: IconButton(
-                              tooltip: '片段信息',
                               style: btnStyle,
                               onPressed: videoDetailCtr.showSBDetail,
                               icon: const Icon(
@@ -1869,7 +1905,6 @@ class HeaderControlState extends State<HeaderControl>
                     width: btnWidth,
                     height: btnHeight,
                     child: IconButton(
-                      tooltip: '发弹幕',
                       style: btnStyle,
                       onPressed: videoDetailCtr.showShootDanmakuSheet,
                       icon: const Icon(
@@ -1887,7 +1922,6 @@ class HeaderControlState extends State<HeaderControl>
                         final enableShowDanmaku =
                             plPlayerController.enableShowDanmaku.value;
                         return IconButton(
-                          tooltip: "${enableShowDanmaku ? '关闭' : '开启'}弹幕",
                           style: btnStyle,
                           onPressed: () {
                             final newVal = !enableShowDanmaku;
@@ -1919,7 +1953,6 @@ class HeaderControlState extends State<HeaderControl>
                   width: btnWidth,
                   height: btnHeight,
                   child: IconButton(
-                    tooltip: '弹幕设置',
                     style: btnStyle,
                     onPressed: showSetDanmaku,
                     icon: const Icon(
@@ -1937,7 +1970,6 @@ class HeaderControlState extends State<HeaderControl>
                     width: btnWidth,
                     height: btnHeight,
                     child: IconButton(
-                      tooltip: '画中画',
                       style: btnStyle,
                       onPressed: () async {
                         if (PlatformUtils.isDesktop && !OS.isHarmony) {
@@ -2045,7 +2077,6 @@ class HeaderControlState extends State<HeaderControl>
                   width: btnWidth,
                   height: btnHeight,
                   child: IconButton(
-                    tooltip: "更多设置",
                     style: btnStyle,
                     onPressed: showSettingSheet,
                     icon: const Icon(

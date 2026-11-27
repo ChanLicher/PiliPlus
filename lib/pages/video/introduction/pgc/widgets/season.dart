@@ -59,14 +59,39 @@ class SeasonPanel extends StatelessWidget {
         itemBuilder: (context, index) {
           final item = seasons[index];
           final isCurr = index == pgcController.seasonIndex;
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          const tileRadius = BorderRadius.all(Radius.circular(12));
           return Container(
             width: kPageItemExtent,
             margin: index != seasons.length - 1 ? const .only(right: 10) : null,
+            decoration: BoxDecoration(
+              color: isCurr
+                  ? (isDark
+                        ? Colors.white.withValues(alpha: 0.14)
+                        : colorScheme.primary.withValues(alpha: 0.10))
+                  : (isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.035)),
+              borderRadius: tileRadius,
+              border: Border.all(
+                color: isCurr
+                    ? colorScheme.primary.withValues(
+                        alpha: isDark ? 0.45 : 0.30,
+                      )
+                    : (isDark
+                          ? Colors.white.withValues(alpha: 0.10)
+                          : Colors.black.withValues(alpha: 0.06)),
+                width: 0.8,
+              ),
+            ),
             child: Material(
-              color: colorScheme.onInverseSurface,
-              borderRadius: const .all(.circular(6)),
+              type: MaterialType.transparency,
+              borderRadius: tileRadius,
               child: InkWell(
-                borderRadius: const .all(.circular(6)),
+                borderRadius: tileRadius,
+                hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.05,
+                ),
                 onTap: () {
                   if (isCurr || pgcController.changingSeason) return;
                   pgcController.changeSeason(item.seasonId!, index).then((res) {

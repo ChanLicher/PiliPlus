@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,6 +19,8 @@ class PlayOrPauseButton extends StatefulWidget {
 class PlayOrPauseButtonState extends State<PlayOrPauseButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController controller;
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -46,6 +50,8 @@ class PlayOrPauseButtonState extends State<PlayOrPauseButton>
   void dispose() {
     widget.plPlayerController.removeStatusLister(_onStatusChanged);
     controller.dispose();
+    _hovered.dispose();
+    _pressed.dispose();
     super.dispose();
   }
 
@@ -54,18 +60,61 @@ class PlayOrPauseButtonState extends State<PlayOrPauseButton>
     return SizedBox(
       width: 42,
       height: 34,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.plPlayerController.onDoubleTapCenter,
-        child: Center(
-          child: AnimatedIcon(
-            semanticLabel: widget.plPlayerController.playerStatus.isPlaying
-                ? '暂停'
-                : '播放',
-            progress: controller,
-            icon: AnimatedIcons.play_pause,
-            color: Colors.white,
-            size: 20,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (event) {
+          if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+            _hovered.value = true;
+          }
+        },
+        onExit: (_) {
+          if (_hovered.value) _hovered.value = false;
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.plPlayerController.onDoubleTapCenter,
+          onTapDown: (_) => _pressed.value = true,
+          onTapUp: (_) => _pressed.value = false,
+          onTapCancel: () => _pressed.value = false,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _hovered,
+            builder: (context, hovered, child) {
+              return ValueListenableBuilder<bool>(
+                valueListenable: _pressed,
+                builder: (context, pressed, _) {
+                  final scale = pressed ? 0.94 : (hovered ? 1.08 : 1.0);
+                  return AnimatedScale(
+                    scale: scale,
+                    duration: const Duration(milliseconds: 130),
+                    curve: const Cubic(0.2, 0, 0, 1),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: pressed
+                            ? Colors.white.withValues(alpha: 0.24)
+                            : hovered
+                            ? Colors.white.withValues(alpha: 0.16)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(12),
+                        ),
+                      ),
+                      child: child,
+                    ),
+                  );
+                },
+              );
+            },
+            child: Center(
+              child: AnimatedIcon(
+                semanticLabel: widget.plPlayerController.playerStatus.isPlaying
+                    ? '暂停'
+                    : '播放',
+                progress: controller,
+                icon: AnimatedIcons.play_pause,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
           ),
         ),
       ),

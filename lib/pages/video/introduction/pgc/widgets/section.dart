@@ -160,23 +160,57 @@ class _SectionPanelState extends State<SectionPanel> {
 
   Widget _buildSection(int index) {
     final section = _sections[index];
+    final isSelected = index == _sectionIndex;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const pillRadius = BorderRadius.all(Radius.circular(14));
     return Padding(
-      padding: const .only(right: 30),
-      child: GestureDetector(
-        behavior: .translucent,
-        onTap: () => _updateSection(index),
-        child: Padding(
-          padding: const .symmetric(vertical: 8),
-          child: Text(
-            section.title ?? (index + 1).toString(),
-            style: TextStyle(
-              height: 1,
-              fontSize: 14,
-              color: index == _sectionIndex
-                  ? colorScheme.onSecondaryContainer
-                  : colorScheme.outline,
+      padding: const .only(right: 8),
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isDark
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : colorScheme.primary.withValues(alpha: 0.12))
+                : Colors.transparent,
+            borderRadius: pillRadius,
+            border: isSelected
+                ? Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.18)
+                        : colorScheme.primary.withValues(alpha: 0.20),
+                    width: 0.7,
+                  )
+                : null,
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            borderRadius: pillRadius,
+            child: InkWell(
+              borderRadius: pillRadius,
+              hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+                alpha: 0.06,
+              ),
+              onTap: () => _updateSection(index),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                child: Text(
+                  section.title ?? (index + 1).toString(),
+                  style: TextStyle(
+                    height: 1,
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected
+                        ? (isDark ? Colors.white : colorScheme.primary)
+                        : colorScheme.outline,
+                  ),
+                  strutStyle: const .new(leading: 0, height: 1, fontSize: 13),
+                ),
+              ),
             ),
-            strutStyle: const .new(leading: 0, height: 1, fontSize: 14),
           ),
         ),
       ),
@@ -189,7 +223,7 @@ class _SectionPanelState extends State<SectionPanel> {
       children: [
         const SizedBox(height: 6),
         SizedBox(
-          height: 30,
+          height: 34,
           child: CustomScrollView(
             scrollDirection: .horizontal,
             controller: _sectionScrollController,
@@ -208,7 +242,7 @@ class _SectionPanelState extends State<SectionPanel> {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          height: 125,
+          height: 136,
           child: ListView.separated(
             padding: .zero,
             scrollDirection: .horizontal,
@@ -226,66 +260,109 @@ class _SectionPanelState extends State<SectionPanel> {
 
   Widget _buildItem(int index) {
     final item = _episodes[index];
-    final color = item.cid == _pgcController.cid.rawValue
-        ? colorScheme.primary
-        : colorScheme.onSurface;
-    return GestureDetector(
-      behavior: .translucent,
-      onTap: () {
-        if (item.cid == null || item.cid == 0) {
-          PiliScheme.videoPush(item.aid, item.bvid);
-          return;
-        }
-        if (item.badge == '会员' && !_isVip) {
-          SmartDialog.showToast('需要大会员');
-        }
-        widget.onChangeEpisode(item, episodeType: .section);
-      },
-      child: Column(
-        spacing: 4,
-        crossAxisAlignment: .stretch,
-        children: [
-          Stack(
-            clipBehavior: .none,
-            children: [
-              NetworkImgLayer(
-                src: item.cover,
-                height: 82,
-                width: _itemExtent,
-                borderRadius: Style.borderRadius6,
+    final isCurr = item.cid == _pgcController.cid.rawValue;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isCurr ? colorScheme.primary : colorScheme.onSurface;
+    const cardRadius = BorderRadius.all(Radius.circular(12));
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isCurr
+              ? (isDark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : colorScheme.primary.withValues(alpha: 0.08))
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.035)),
+          borderRadius: cardRadius,
+          border: Border.all(
+            color: isCurr
+                ? colorScheme.primary.withValues(alpha: isDark ? 0.45 : 0.30)
+                : (isDark
+                      ? Colors.white.withValues(alpha: 0.10)
+                      : Colors.black.withValues(alpha: 0.06)),
+            width: 0.8,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: cardRadius,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: cardRadius,
+              hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+                alpha: 0.05,
               ),
-              if (item.duration != null)
-                PBadge(
-                  text: DurationUtils.formatDuration(item.duration! ~/ 1000),
-                  right: 4,
-                  bottom: 4,
-                  type: .gray,
-                  size: .small,
-                  padding: const .symmetric(horizontal: 2, vertical: 1),
-                ),
-              if (item.badge?.isNotEmpty ?? false)
-                PBadge(
-                  text: item.badge,
-                  top: 4,
-                  right: 4,
-                  size: .small,
-                  type: item.badgeType,
-                  padding: const .symmetric(horizontal: 2, vertical: 1),
-                ),
-            ],
-          ),
-          Text.rich(
-            TextSpan(
-              text: item.title,
-              children: item.longTitle?.isNotEmpty == true
-                  ? [TextSpan(text: ' ${item.longTitle}')]
-                  : null,
+              onTap: () {
+                if (item.cid == null || item.cid == 0) {
+                  PiliScheme.videoPush(item.aid, item.bvid);
+                  return;
+                }
+                if (item.badge == '会员' && !_isVip) {
+                  SmartDialog.showToast('需要大会员');
+                }
+                widget.onChangeEpisode(item, episodeType: .section);
+              },
+              child: Column(
+                spacing: 4,
+                crossAxisAlignment: .stretch,
+                children: [
+                  Stack(
+                    clipBehavior: .none,
+                    children: [
+                      NetworkImgLayer(
+                        src: item.cover,
+                        height: 82,
+                        width: _itemExtent,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                      ),
+                      if (item.duration != null)
+                        PBadge(
+                          text: DurationUtils.formatDuration(
+                            item.duration! ~/ 1000,
+                          ),
+                          right: 4,
+                          bottom: 4,
+                          type: .gray,
+                          size: .small,
+                          padding: const .symmetric(horizontal: 2, vertical: 1),
+                        ),
+                      if (item.badge?.isNotEmpty ?? false)
+                        PBadge(
+                          text: item.badge,
+                          top: 4,
+                          right: 4,
+                          size: .small,
+                          type: item.badgeType,
+                          padding: const .symmetric(horizontal: 2, vertical: 1),
+                        ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 1, 6, 4),
+                    child: Text.rich(
+                      TextSpan(
+                        text: item.title,
+                        children: item.longTitle?.isNotEmpty == true
+                            ? [TextSpan(text: ' ${item.longTitle}')]
+                            : null,
+                      ),
+                      maxLines: 2,
+                      overflow: .ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: color,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            maxLines: 2,
-            overflow: .ellipsis,
-            style: TextStyle(fontSize: 12.5, color: color, height: 1.3),
           ),
-        ],
+        ),
       ),
     );
   }

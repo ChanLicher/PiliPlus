@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:PiliPlus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:PiliPlus/pages/video/controller.dart';
@@ -153,7 +155,24 @@ class BottomControl extends StatelessWidget {
               ),
             ),
           ),
-          buildBottomControl(),
+          ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.34),
+                  borderRadius: const BorderRadius.all(Radius.circular(20)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    width: 0.8,
+                  ),
+                ),
+                child: buildBottomControl(),
+              ),
+            ),
+          ),
         ],
       ),
     );

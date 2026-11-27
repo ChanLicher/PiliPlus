@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:PiliPlus/common/assets.dart';
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/style.dart';
@@ -1030,32 +1032,30 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
   }
 
   Widget get _aiBtn => Positioned(
-    right: 8,
-    child: Center(
-      child: GestureDetector(
-        behavior: .opaque,
-        onTap: () async {
-          if (introController.aiConclusionResult == null) {
-            await introController.aiConclusion();
+    right: 0,
+    top: -4,
+    child: _AiGlassPill(
+      onTap: () async {
+        if (introController.aiConclusionResult == null) {
+          await introController.aiConclusion();
+        }
+        if (introController.aiConclusionResult case AiConclusionResult(
+          :final summary,
+          :final outline,
+        )) {
+          if (summary?.isNotEmpty == true || outline?.isNotEmpty == true) {
+            widget.showAiBottomSheet();
+          } else {
+            SmartDialog.showToast("当前视频不支持AI视频总结");
           }
-          if (introController.aiConclusionResult case AiConclusionResult(
-            :final summary,
-            :final outline,
-          )) {
-            if (summary?.isNotEmpty == true || outline?.isNotEmpty == true) {
-              widget.showAiBottomSheet();
-            } else {
-              SmartDialog.showToast("当前视频不支持AI视频总结");
-            }
-          }
-        },
-        child: Image.asset(
-          semanticLabel: 'AI总结',
-          Assets.ai,
-          height: 18,
-          width: 18,
-          cacheHeight: 18.cacheSize(context),
-        ),
+        }
+      },
+      icon: Image.asset(
+        semanticLabel: 'AI总结',
+        Assets.ai,
+        height: 16,
+        width: 16,
+        cacheHeight: 16.cacheSize(context),
       ),
     ),
   );
@@ -1093,6 +1093,107 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
               ),
             )
             .toList(),
+      ),
+    );
+  }
+}
+
+class _AiGlassPill extends StatefulWidget {
+  const _AiGlassPill({
+    required this.onTap,
+    required this.icon,
+  });
+
+  final VoidCallback onTap;
+  final Widget icon;
+
+  @override
+  State<_AiGlassPill> createState() => _AiGlassPillState();
+}
+
+class _AiGlassPillState extends State<_AiGlassPill> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const radius = BorderRadius.all(Radius.circular(14));
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (event) {
+        if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+          _hovered.value = true;
+        }
+      },
+      onExit: (_) {
+        if (_hovered.value) _hovered.value = false;
+      },
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _hovered,
+        builder: (context, hovered, child) {
+          return AnimatedScale(
+            scale: hovered ? 1.06 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: const Cubic(0.2, 0, 0, 1),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: hovered
+                    ? (isDark
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : theme.colorScheme.primary.withValues(alpha: 0.12))
+                    : (isDark
+                          ? Colors.white.withValues(alpha: 0.07)
+                          : Colors.black.withValues(alpha: 0.04)),
+                borderRadius: radius,
+                border: Border.all(
+                  color: hovered
+                      ? theme.colorScheme.primary.withValues(alpha: 0.32)
+                      : (isDark
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : Colors.black.withValues(alpha: 0.07)),
+                  width: 0.8,
+                ),
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          child: InkWell(
+            borderRadius: radius,
+            hoverColor: Colors.transparent,
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: [
+                  widget.icon,
+                  Text(
+                    'AI总结',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.78,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

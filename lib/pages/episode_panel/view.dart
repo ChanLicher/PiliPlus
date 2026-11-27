@@ -369,13 +369,92 @@ class _EpisodePanelState extends State<EpisodePanel>
       children: [
         _buildToolbar(),
         if (_hasSections)
-          TabBar(
-            dividerHeight: 1,
-            isScrollable: true,
-            controller: _tabController,
-            padding: const .only(right: 60),
-            tabs: _sections.map((e) => Tab(text: e.title)).toList(),
-            dividerColor: colorScheme.outline.withValues(alpha: 0.1),
+          Builder(
+            builder: (context) {
+              final isDark = theme.brightness == Brightness.dark;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: RepaintBoundary(
+                    child: Container(
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: isDark
+                              ? [
+                                  Colors.white.withValues(alpha: 0.10),
+                                  Colors.white.withValues(alpha: 0.06),
+                                ]
+                              : [
+                                  Colors.white.withValues(alpha: 0.92),
+                                  Colors.white.withValues(alpha: 0.78),
+                                ],
+                        ),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(18),
+                        ),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.13)
+                              : Colors.white.withValues(alpha: 0.94),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(18),
+                        ),
+                        child: TabBar(
+                          dividerHeight: 0,
+                          dividerColor: Colors.transparent,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          overlayColor: const WidgetStatePropertyAll(
+                            Colors.transparent,
+                          ),
+                          splashFactory: NoSplash.splashFactory,
+                          controller: _tabController,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          indicatorWeight: 0,
+                          indicatorPadding: const EdgeInsets.symmetric(
+                            horizontal: 2,
+                            vertical: 4,
+                          ),
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          indicator: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.16)
+                                : colorScheme.primary.withValues(alpha: 0.12),
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(15),
+                            ),
+                          ),
+                          labelColor: isDark
+                              ? Colors.white
+                              : colorScheme.primary,
+                          unselectedLabelColor: colorScheme.onSurface
+                              .withValues(alpha: 0.65),
+                          labelStyle: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          tabs: _sections
+                              .map((e) => Tab(height: 28, text: e.title))
+                              .toList(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         Expanded(child: enableSlide ? slideList() : buildList()),
       ],
@@ -558,41 +637,81 @@ class _EpisodePanelState extends State<EpisodePanel>
       }
     }
 
-    return Padding(
-      padding: const .only(bottom: 2),
+    final isDark = theme.brightness == Brightness.dark;
+    const cardRadius = BorderRadius.all(Radius.circular(14));
+    return RepaintBoundary(
       child: SizedBox(
         height: 110,
-        child: Material(
-          type: .transparency,
-          child: InkWell(
-            onTap: () {
-              if (isCurrItem) return;
-              EasyDebounce.debounce(
-                'onChangeEpisode',
-                const Duration(milliseconds: 200),
-                () => _onChangeEpisode(tabIndex, index, episode, title),
-              );
-            },
-            onLongPress: onLongPress,
-            onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-            child: Padding(
-              padding: const .symmetric(
-                horizontal: Style.safeSpace,
-                vertical: 5,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 3, 10, 3),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isCurrItem
+                  ? (isDark
+                        ? Colors.white.withValues(alpha: 0.11)
+                        : primary.withValues(alpha: 0.08))
+                  : (isDark
+                        ? Colors.white.withValues(alpha: 0.055)
+                        : Colors.white.withValues(alpha: 0.84)),
+              borderRadius: cardRadius,
+              border: Border.all(
+                color: isCurrItem
+                    ? primary.withValues(alpha: isDark ? 0.45 : 0.32)
+                    : (isDark
+                          ? Colors.white.withValues(alpha: 0.10)
+                          : Colors.white.withValues(alpha: 0.92)),
+                width: 0.8,
               ),
-              child: Row(
-                spacing: 10,
-                children: [
-                  if (cover?.isNotEmpty == true)
-                    Stack(
-                      clipBehavior: .none,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(
+                    alpha: isDark ? 0.18 : 0.04,
+                  ),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: cardRadius,
+              child: Material(
+                type: .transparency,
+                child: InkWell(
+                  borderRadius: cardRadius,
+                  hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+                    alpha: 0.045,
+                  ),
+                  onTap: () {
+                    if (isCurrItem) return;
+                    EasyDebounce.debounce(
+                      'onChangeEpisode',
+                      const Duration(milliseconds: 200),
+                      () => _onChangeEpisode(tabIndex, index, episode, title),
+                    );
+                  },
+                  onLongPress: onLongPress,
+                  onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+                  child: Padding(
+                    padding: const .symmetric(
+                      horizontal: 6,
+                      vertical: 5,
+                    ),
+                    child: Row(
+                      spacing: 10,
                       children: [
-                        NetworkImgLayer(
-                          src: cover,
-                          width: 160,
-                          height: 100,
-                          cacheWidth: cacheWidth,
-                        ),
+                        if (cover?.isNotEmpty == true)
+                          Stack(
+                            clipBehavior: .none,
+                            children: [
+                              NetworkImgLayer(
+                                src: cover,
+                                width: 152,
+                                height: 94,
+                                cacheWidth: cacheWidth,
+                                borderRadius: const BorderRadius.all(
+                                  Radius.circular(9),
+                                ),
+                              ),
                         if (duration != null && duration > 0)
                           PBadge(
                             text: DurationUtils.formatDuration(duration),
@@ -701,6 +820,9 @@ class _EpisodePanelState extends State<EpisodePanel>
           ),
         ),
       ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -763,51 +885,85 @@ class _EpisodePanelState extends State<EpisodePanel>
     },
   );
 
-  Widget _buildToolbar() => Container(
-    height: 45,
-    padding: .symmetric(horizontal: !_isSidePanel ? 14 : 6),
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.1)),
+  Widget _buildToolbar() {
+    final isDark = theme.brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+      child: RepaintBoundary(
+        child: Container(
+          height: 38,
+          padding: EdgeInsets.symmetric(horizontal: !_isSidePanel ? 12 : 6),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [
+                      Colors.white.withValues(alpha: 0.10),
+                      Colors.white.withValues(alpha: 0.06),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.92),
+                      Colors.white.withValues(alpha: 0.78),
+                    ],
+            ),
+            borderRadius: const BorderRadius.all(Radius.circular(18)),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.13)
+                  : Colors.white.withValues(alpha: 0.94),
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              if (!_isSidePanel)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Text(
+                    _type.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              if (_favState != null) Obx(() => _buildFavBtn(_favState!.value)),
+              iconButton(
+                iconSize: 20,
+                icon: const Icon(Icons.vertical_align_top),
+                onPressed: _jumpToTop,
+              ),
+              iconButton(
+                iconSize: 20,
+                icon: const Icon(Icons.vertical_align_bottom),
+                onPressed: _jumpToBottom,
+              ),
+              iconButton(
+                iconSize: 20,
+                icon: const Icon(Icons.my_location),
+                onPressed: _jumpToCurrent,
+              ),
+              if (_isUgc) _buildDataReverseBtn,
+              const Spacer(),
+              _buildUiReverseBtn,
+              if (!_isSidePanel)
+                iconButton(
+                  iconSize: 20,
+                  icon: const Icon(Icons.close),
+                  onPressed: Get.back,
+                ),
+            ],
+          ),
+        ),
       ),
-    ),
-    child: Row(
-      children: [
-        if (!_isSidePanel)
-          Text(
-            _type.title,
-            style: const TextStyle(fontSize: 16),
-          ),
-        if (_favState != null) Obx(() => _buildFavBtn(_favState!.value)),
-        iconButton(
-          iconSize: 22,
-          tooltip: '跳至顶部',
-          icon: const Icon(Icons.vertical_align_top),
-          onPressed: _jumpToTop,
-        ),
-        iconButton(
-          iconSize: 22,
-          tooltip: '跳至底部',
-          icon: const Icon(Icons.vertical_align_bottom),
-          onPressed: _jumpToBottom,
-        ),
-        iconButton(
-          iconSize: 22,
-          tooltip: '跳至当前',
-          icon: const Icon(Icons.my_location),
-          onPressed: _jumpToCurrent,
-        ),
-        if (_isUgc) _buildDataReverseBtn,
-        const Spacer(),
-        _buildUiReverseBtn,
-        if (!_isSidePanel)
-          iconButton(
-            iconSize: 22,
-            tooltip: '关闭',
-            icon: const Icon(Icons.close),
-            onPressed: Get.back,
-          ),
-      ],
-    ),
-  );
+    );
+  }
 }

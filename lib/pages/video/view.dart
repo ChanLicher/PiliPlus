@@ -1,4 +1,4 @@
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:ui' show ImageFilter, PointerDeviceKind;
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -1356,40 +1356,49 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     return const SizedBox.shrink();
   });
 
-  Widget _moreBtn(Color color, {List<Shadow>? shadows}) => PopupMenuButton(
-    icon: Icon(
-      size: 22,
-      Icons.more_vert,
-      color: color,
-      shadows: shadows,
-    ),
-    itemBuilder: (BuildContext context) => <PopupMenuEntry>[
-      PopupMenuItem(
+  void _openMoreGlassMenu(BuildContext btnContext) {
+    final RenderBox? button = btnContext.findRenderObject() as RenderBox?;
+    final OverlayState overlayState = Overlay.of(btnContext, rootOverlay: true);
+    final RenderBox? overlay =
+        overlayState.context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+
+    final Offset topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Rect anchorRect = topLeft & button.size;
+    final items = <_VideoGlassMenuAction>[
+      _VideoGlassMenuAction(
+        title: '稍后再看',
+        icon: Icons.watch_later_outlined,
         onTap: introController.viewLater,
-        child: const Text('稍后再看'),
       ),
       if (videoDetailController.epId == null)
-        PopupMenuItem(
-          onTap: () => videoDetailController.showNoteList(context),
-          child: const Text('查看笔记'),
+        _VideoGlassMenuAction(
+          title: '查看笔记',
+          icon: Icons.edit_note_rounded,
+          onTap: () => videoDetailController.showNoteList(btnContext),
         ),
       if (!videoDetailController.isFileSource)
-        PopupMenuItem(
-          onTap: () => videoDetailController.onDownload(this.context),
-          child: const Text('缓存视频'),
+        _VideoGlassMenuAction(
+          title: '缓存视频',
+          icon: Icons.download_outlined,
+          onTap: () => videoDetailController.onDownload(context),
         ),
       if (videoDetailController.cover.value.isNotEmpty)
-        PopupMenuItem(
+        _VideoGlassMenuAction(
+          title: '保存封面',
+          icon: Icons.image_outlined,
           onTap: () =>
               ImageUtils.downloadImg([videoDetailController.cover.value]),
-          child: const Text('保存封面'),
         ),
       if (!videoDetailController.isFileSource && videoDetailController.isUgc)
-        PopupMenuItem(
+        _VideoGlassMenuAction(
+          title: '听音频',
+          icon: Icons.headphones_outlined,
           onTap: videoDetailController.toAudioPage,
-          child: const Text('听音频'),
         ),
-      PopupMenuItem(
+      _VideoGlassMenuAction(
+        title: '举报',
+        icon: Icons.outlined_flag_rounded,
         onTap: () {
           if (!Accounts.main.isLogin) {
             SmartDialog.showToast('账号未登录');
@@ -1397,9 +1406,48 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
             PageUtils.reportVideo(videoDetailController.aid);
           }
         },
-        child: const Text('举报'),
       ),
-    ],
+    ];
+
+    late final OverlayEntry entry;
+    bool removed = false;
+    void removeEntry() {
+      if (removed) return;
+      removed = true;
+      entry.remove();
+    }
+
+    entry = OverlayEntry(
+      builder: (_) => _VideoMoreGlassOverlay(
+        anchorRect: anchorRect,
+        actions: items,
+        onRemoved: removeEntry,
+      ),
+    );
+    overlayState.insert(entry);
+  }
+
+  Widget _moreBtn(Color color, {List<Shadow>? shadows}) => Builder(
+    builder: (btnContext) => SizedBox.square(
+      dimension: 40,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          hoverColor: Colors.white.withValues(alpha: 0.14),
+          splashColor: Colors.white.withValues(alpha: 0.20),
+          onTap: () => _openMoreGlassMenu(btnContext),
+          child: Center(
+            child: Icon(
+              size: 22,
+              Icons.more_vert,
+              color: color,
+              shadows: shadows,
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
   Widget plPlayer({
@@ -2375,5 +2423,262 @@ class _VideoHoverTabState extends State<_VideoHoverTab> {
         ),
       ),
     );
+  }
+}
+
+class _VideoGlassMenuAction {
+  const _VideoGlassMenuAction({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+}
+
+class _VideoMoreGlassOverlay extends StatefulWidget {
+  const _VideoMoreGlassOverlay({
+    required this.anchorRect,
+    required this.actions,
+    required this.onRemoved,
+  });
+
+  final Rect anchorRect;
+  final List<_VideoGlassMenuAction> actions;
+  final VoidCallback onRemoved;
+
+  @override
+  State<_VideoMoreGlassOverlay> createState() => _VideoMoreGlassOverlayState();
+}
+
+class _VideoMoreGlassOverlayState extends State<_VideoMoreGlassOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _curved;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 130),
+    );
+    _curved = CurvedAnimation(
+      parent: _controller,
+      curve: const Cubic(0.2, 0, 0, 1),
+      reverseCurve: Curves.easeIn,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _dismissImmediately() {
+    if (_closing) return;
+    _closing = true;
+    widget.onRemoved();
+  }
+
+  Future<void> _dismiss() async {
+    if (_closing) return;
+    _closing = true;
+    await _controller.reverse();
+    widget.onRemoved();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const itemHeight = 40.0;
+    final alignRight = widget.anchorRect.center.dx > mediaQuery.size.width * 0.5;
+    final scaleAlignment = Alignment(alignRight ? 1.0 : -1.0, -1.0);
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _dismiss,
+            onSecondaryTap: _dismiss,
+            child: const SizedBox.expand(),
+          ),
+        ),
+        CustomSingleChildLayout(
+          delegate: _VideoMoreMenuDelegate(
+            anchorRect: widget.anchorRect,
+            safePadding: mediaQuery.padding,
+            alignRight: alignRight,
+          ),
+          child: FadeTransition(
+            opacity: _curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.92, end: 1.0).animate(_curved),
+              alignment: scaleAlignment,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.42 : 0.16,
+                      ),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1D1E22).withValues(alpha: 0.80)
+                            : Colors.white.withValues(alpha: 0.84),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(16),
+                        ),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.14)
+                              : Colors.white.withValues(alpha: 0.92),
+                          width: 0.9,
+                        ),
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 148,
+                          maxWidth: 210,
+                        ),
+                        child: IntrinsicWidth(
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: widget.actions.map((action) {
+                                return Material(
+                                  type: MaterialType.transparency,
+                                  child: InkWell(
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.circular(11),
+                                    ),
+                                    hoverColor:
+                                        (isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.08),
+                                    splashColor:
+                                        (isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.12),
+                                    onTap: () {
+                                      _dismissImmediately();
+                                      action.onTap();
+                                    },
+                                    child: SizedBox(
+                                      height: itemHeight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              action.icon,
+                                              size: 16,
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.82),
+                                            ),
+                                            const SizedBox(width: 9),
+                                            Text(
+                                              action.title,
+                                              style: TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VideoMoreMenuDelegate extends SingleChildLayoutDelegate {
+  _VideoMoreMenuDelegate({
+    required this.anchorRect,
+    required this.safePadding,
+    required this.alignRight,
+  });
+
+  final Rect anchorRect;
+  final EdgeInsets safePadding;
+  final bool alignRight;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final maxWidth = (constraints.maxWidth - 20).clamp(148.0, 220.0);
+    final maxHeight =
+        (constraints.maxHeight - safePadding.top - safePadding.bottom - 20)
+            .clamp(80.0, constraints.maxHeight);
+    return BoxConstraints.loose(Size(maxWidth, maxHeight));
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    const double edgeMargin = 10.0;
+    double x = alignRight
+        ? anchorRect.right - childSize.width
+        : anchorRect.left;
+    x = x.clamp(
+      safePadding.left + edgeMargin,
+      (size.width - safePadding.right - childSize.width - edgeMargin).clamp(
+        safePadding.left + edgeMargin,
+        size.width,
+      ),
+    );
+    double y = (anchorRect.bottom + 4).clamp(
+      safePadding.top + edgeMargin,
+      (size.height - safePadding.bottom - childSize.height - edgeMargin).clamp(
+        safePadding.top + edgeMargin,
+        size.height,
+      ),
+    );
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(_VideoMoreMenuDelegate oldDelegate) {
+    return anchorRect != oldDelegate.anchorRect ||
+        safePadding != oldDelegate.safePadding ||
+        alignRight != oldDelegate.alignRight;
   }
 }
