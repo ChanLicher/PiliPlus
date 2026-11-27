@@ -1,4 +1,6 @@
 ﻿import 'dart:convert';
+import 'dart:ui' show ImageFilter;
+import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent;
 
 import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
 import 'package:PiliPlus/common/widgets/disabled_icon.dart';
@@ -32,10 +34,45 @@ class _SearchPageState extends State<SearchPage> {
   late bool isPortrait;
   late EdgeInsets padding;
 
+  final ScrollController _scrollController = ScrollController();
+  double? _wheelTarget;
+  int _wheelLastMs = 0;
+
   @override
   void initState() {
     super.initState();
     _searchController = Get.put(SSearchController(_tag), tag: _tag);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_scrollController.hasClients) return;
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final base = (_wheelTarget != null && now - _wheelLastMs < 260)
+          ? _wheelTarget!
+          : position.pixels;
+      _wheelLastMs = now;
+      final target = (base + dy * 1.15).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      _wheelTarget = target;
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   @override
@@ -55,78 +92,219 @@ class _SearchPageState extends State<SearchPage> {
         ? _buildHotSearch(isTrending: false)
         : null;
 
+    final topBarHeight = padding.top + 68;
     return SimpleScaffold(
-      appBar: _buildAppBar,
-      body: Padding(
-        padding: .only(left: padding.left, right: padding.right),
-        child: CustomScrollView(
-          slivers: [
-            if (_searchController.searchSuggestion) _buildSearchSuggest(),
-            if (isPortrait) ...[
-              ?trending,
-              _buildHistory,
-              ?rcmd,
-            ] else if (trending != null || rcmd != null)
-              SliverCrossAxisGroup(
+      body: Stack(
+        children: [
+          Padding(
+            padding: .only(left: padding.left, right: padding.right),
+            child: Listener(
+              onPointerDown: (_) => _wheelTarget = null,
+              onPointerSignal: _onPointerSignal,
+              child: CustomScrollView(
+                controller: _scrollController,
                 slivers: [
-                  SliverMainAxisGroup(slivers: [?trending, ?rcmd]),
-                  _buildHistory,
+                  SliverToBoxAdapter(child: SizedBox(height: topBarHeight)),
+                  if (_searchController.searchSuggestion) _buildSearchSuggest(),
+                  if (isPortrait) ...[
+                    ?trending,
+                    _buildHistory,
+                    ?rcmd,
+                  ] else if (trending != null || rcmd != null)
+                    SliverCrossAxisGroup(
+                      slivers: [
+                        SliverMainAxisGroup(slivers: [?trending, ?rcmd]),
+                        _buildHistory,
+                      ],
+                    )
+                  else
+                    _buildHistory,
+                  SliverPadding(padding: .only(bottom: padding.bottom + 24)),
                 ],
-              )
-            else
-              _buildHistory,
-            SliverPadding(padding: .only(bottom: padding.bottom)),
-          ],
+              ),
+            ),
+          ),
+          // 顶部渐进柔化衬底：内容滑入毛玻璃搜索栏下方时平滑过渡，无硬分界线
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topBarHeight + 28,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      theme.colorScheme.surface.withValues(alpha: 0.92),
+                      theme.colorScheme.surface.withValues(alpha: 0.65),
+                      theme.colorScheme.surface.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 0.65, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 顶部悬浮沉浸光感毛玻璃搜索栏
+          Positioned(
+            top: padding.top + 10,
+            left: padding.left + 14,
+            right: padding.right + 14,
+            child: _buildFloatingGlassBar(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassPill({
+    required Widget child,
+    double height = 48,
+    double? width,
+    Color? tintColor,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    final baseColor = tintColor ??
+        (isDark
+            ? theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.62)
+            : theme.colorScheme.surface.withValues(alpha: 0.72));
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.white.withValues(alpha: 0.75);
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(height / 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(height / 2),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: baseColor,
+              borderRadius: BorderRadius.circular(height / 2),
+              border: Border.all(color: borderColor, width: 0.8),
+            ),
+            child: child,
+          ),
         ),
       ),
     );
   }
 
-  PreferredSizeWidget get _buildAppBar => AppBar(
-    shape: Border(
-      bottom: BorderSide(
-        color: theme.dividerColor.withValues(alpha: 0.08),
-        width: 1,
-      ),
-    ),
-    actions: [
-      Obx(
-        () => _searchController.showUidBtn.value
-            ? IconButton(
-                tooltip: 'UID搜索用户',
-                icon: const Icon(Icons.person_outline, size: 22),
-                onPressed: () => Get.toNamed(
-                  '/member?mid=${_searchController.controller.text}',
-                ),
-              )
-            : const SizedBox.shrink(),
-      ),
-      IconButton(
-        tooltip: '清空',
-        icon: const Icon(Icons.clear, size: 22),
-        onPressed: _searchController.onClear,
-      ),
-      IconButton(
-        tooltip: '搜索',
-        onPressed: _searchController.submit,
-        icon: const Icon(Icons.search, size: 22),
-      ),
-      const SizedBox(width: 10),
-    ],
-    title: TextField(
-      autofocus: true,
-      focusNode: _searchController.searchFocusNode,
-      controller: _searchController.controller,
-      textInputAction: TextInputAction.search,
-      onChanged: _searchController.onChange,
-      decoration: InputDecoration(
-        visualDensity: .standard,
-        hintText: _searchController.hintText ?? '搜索',
-        border: InputBorder.none,
-      ),
-      onSubmitted: (value) => _searchController.submit(),
-    ),
-  );
+  Widget _buildFloatingGlassBar() {
+    final colorScheme = theme.colorScheme;
+    return Row(
+      children: [
+        _buildGlassPill(
+          width: 48,
+          height: 48,
+          child: Material(
+            type: MaterialType.transparency,
+            child: IconButton(
+              tooltip: '返回',
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                size: 22,
+                color: colorScheme.onSurface,
+              ),
+              onPressed: Get.back,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildGlassPill(
+            height: 48,
+            child: Material(
+              type: MaterialType.transparency,
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      autofocus: true,
+                      focusNode: _searchController.searchFocusNode,
+                      controller: _searchController.controller,
+                      textInputAction: TextInputAction.search,
+                      onChanged: _searchController.onChange,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        hintText: _searchController.hintText ?? '搜索',
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (value) => _searchController.submit(),
+                    ),
+                  ),
+                  Obx(
+                    () => _searchController.showUidBtn.value
+                        ? IconButton(
+                            tooltip: 'UID搜索用户',
+                            icon: Icon(
+                              Icons.person_outline,
+                              size: 20,
+                              color: colorScheme.primary,
+                            ),
+                            onPressed: () => Get.toNamed(
+                              '/member?mid=${_searchController.controller.text}',
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  IconButton(
+                    tooltip: '清空',
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    onPressed: _searchController.onClear,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        _buildGlassPill(
+          width: 48,
+          height: 48,
+          tintColor: colorScheme.primary.withValues(alpha: 0.85),
+          child: Material(
+            type: MaterialType.transparency,
+            child: IconButton(
+              tooltip: '搜索',
+              onPressed: _searchController.submit,
+              icon: Icon(
+                Icons.search_rounded,
+                size: 22,
+                color: colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildSearchSuggest() {
     return Obx(() {
@@ -134,38 +312,70 @@ class _SearchPageState extends State<SearchPage> {
       return list.isNotEmpty &&
               list.first.term != null &&
               _searchController.controller.text != ''
-          ? SliverList.list(
-              children: list
-                  .map(
-                    (item) => InkWell(
-                      borderRadius: const .all(.circular(4)),
-                      onTap: () => _searchController.onClickKeyword(
-                        item.term!,
-                        clearSuggest: false,
+          ? SliverPadding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+              sliver: SliverToBoxAdapter(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHigh
+                            .withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.25),
+                          width: 0.8,
+                        ),
                       ),
-                      child: Padding(
-                        padding: const .only(left: 20, top: 9, bottom: 9),
-                        child: Text.rich(
-                          TextSpan(
-                            children: Em.regTitle(item.textRich)
-                                .map(
-                                  (e) => TextSpan(
-                                    text: e.text,
-                                    style: e.isEm
-                                        ? TextStyle(
-                                            fontWeight: .bold,
-                                            color: theme.colorScheme.primary,
-                                          )
-                                        : null,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: list
+                              .map(
+                                (item) => InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () => _searchController.onClickKeyword(
+                                    item.term!,
+                                    clearSuggest: false,
                                   ),
-                                )
-                                .toList(),
-                          ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 11,
+                                    ),
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: Em.regTitle(item.textRich)
+                                            .map(
+                                              (e) => TextSpan(
+                                                text: e.text,
+                                                style: e.isEm
+                                                    ? TextStyle(
+                                                        fontWeight: .bold,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .primary,
+                                                      )
+                                                    : null,
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                         ),
                       ),
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+              ),
             )
           : const SliverToBoxAdapter();
     });
