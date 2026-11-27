@@ -1,8 +1,9 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:PiliPlus/common/widgets/video_card/video_card_h.dart';
 import 'package:PiliPlus/models/common/search/video_search_type.dart';
 import 'package:PiliPlus/models/search/result.dart';
-import 'package:PiliPlus/pages/search/widgets/search_text.dart';
 import 'package:PiliPlus/pages/search_panel/video/controller.dart';
 import 'package:PiliPlus/pages/search_panel/view.dart';
 import 'package:PiliPlus/utils/grid.dart';
@@ -55,55 +56,100 @@ mixin SearchVideoPanelMixin<S extends SearchVideoPanel>
 
   @override
   Widget buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SliverFloatingHeaderWidget(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: Colors.transparent,
       child: Padding(
-        padding: const .fromLTRB(12, 0, 12, 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Wrap(
+        padding: const .fromLTRB(12, 2, 12, 8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(18)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(18)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.white.withValues(alpha: 0.78),
+                  borderRadius: const BorderRadius.all(Radius.circular(18)),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.white.withValues(alpha: 0.90),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
                   children: [
-                    for (final e in ArchiveFilterType.values)
-                      Obx(
-                        () => SearchText(
-                          fontSize: 13,
-                          text: e.desc,
-                          bgColor: Colors.transparent,
-                          textColor: controller.selectedType.value == e
-                              ? colorScheme.primary
-                              : colorScheme.outline,
-                          onTap: (_) => controller
-                            ..order = e == .totalrank ? '' : e.name
-                            ..selectedType.value = e
-                            ..onSortSearch(getBack: false),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          spacing: 4,
+                          children: [
+                            for (final e in ArchiveFilterType.values)
+                              Obx(() {
+                                final selected =
+                                    controller.selectedType.value == e;
+                                return _GlassFilterChip(
+                                  label: e.desc,
+                                  selected: selected,
+                                  isDark: isDark,
+                                  primary: colorScheme.primary,
+                                  onSurface: colorScheme.onSurface,
+                                  onTap: () => controller
+                                    ..order = e == .totalrank ? '' : e.name
+                                    ..selectedType.value = e
+                                    ..onSortSearch(getBack: false),
+                                );
+                              }),
+                          ],
                         ),
                       ),
+                    ),
+                    Container(
+                      width: 0.8,
+                      height: 16,
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      color: (isDark ? Colors.white : Colors.black).withValues(
+                        alpha: 0.12,
+                      ),
+                    ),
+                    Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        hoverColor: (isDark ? Colors.white : Colors.black)
+                            .withValues(alpha: 0.08),
+                        onTap: () => controller.onShowFilterDialog(context),
+                        child: SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: Icon(
+                            Icons.filter_list_outlined,
+                            size: 17,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-            const VerticalDivider(indent: 7, endIndent: 8),
-            const SizedBox(width: 3),
-            SizedBox(
-              width: 32,
-              height: 32,
-              child: IconButton(
-                tooltip: '筛选',
-                style: const ButtonStyle(
-                  padding: WidgetStatePropertyAll(EdgeInsets.zero),
-                ),
-                onPressed: () => controller.onShowFilterDialog(context),
-                icon: Icon(
-                  Icons.filter_list_outlined,
-                  size: 18,
-                  color: colorScheme.primary,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -130,4 +176,95 @@ mixin SearchVideoPanelMixin<S extends SearchVideoPanel>
 
   @override
   Widget get buildLoading => gridSkeleton;
+}
+
+class _GlassFilterChip extends StatefulWidget {
+  const _GlassFilterChip({
+    required this.label,
+    required this.selected,
+    required this.isDark,
+    required this.primary,
+    required this.onSurface,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool isDark;
+  final Color primary;
+  final Color onSurface;
+  final VoidCallback onTap;
+
+  @override
+  State<_GlassFilterChip> createState() => _GlassFilterChipState();
+}
+
+class _GlassFilterChipState extends State<_GlassFilterChip> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => _hovered.value = true,
+      onExit: (_) => _hovered.value = false,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _hovered,
+        builder: (context, hovered, _) {
+          final bgColor = widget.selected
+              ? (widget.isDark
+                    ? Colors.white.withValues(alpha: 0.16)
+                    : widget.primary.withValues(alpha: 0.12))
+              : hovered
+              ? (widget.isDark ? Colors.white : Colors.black).withValues(
+                  alpha: widget.isDark ? 0.09 : 0.05,
+                )
+              : Colors.transparent;
+          return AnimatedScale(
+            scale: hovered ? 1.03 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: const Cubic(0.2, 0, 0, 1),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: widget.onTap,
+                borderRadius: const BorderRadius.all(Radius.circular(14)),
+                hoverColor: Colors.transparent,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  curve: const Cubic(0.2, 0, 0, 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                  ),
+                  child: Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: widget.selected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: widget.selected
+                          ? (widget.isDark ? Colors.white : widget.primary)
+                          : widget.onSurface.withValues(alpha: 0.68),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

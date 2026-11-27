@@ -314,24 +314,55 @@ class VideoPopupMenu extends StatelessWidget {
     ];
   }
 
+  static VoidCallback? _activeDismiss;
+
   void _openGlassMenu(BuildContext context) {
+    _activeDismiss?.call();
+    _activeDismiss = null;
+
     final RenderBox? button = context.findRenderObject() as RenderBox?;
+    final OverlayState overlayState = Overlay.of(context, rootOverlay: true);
     final RenderBox? overlay =
-        Overlay.of(context, rootOverlay: true).context.findRenderObject()
-            as RenderBox?;
+        overlayState.context.findRenderObject() as RenderBox?;
     if (button == null || overlay == null) return;
 
     final Offset topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
     final Rect anchorRect = topLeft & button.size;
     final actions = _buildActions(context);
 
-    Navigator.of(context, rootNavigator: true).push(
-      _GlassVideoMenuRoute(
+    late final OverlayEntry entry;
+    bool removed = false;
+    void removeEntry() {
+      if (removed) return;
+      removed = true;
+      entry.remove();
+    }
+
+    final overlayKey = GlobalKey<_GlassVideoMenuOverlayState>();
+    _activeDismiss = () {
+      final state = overlayKey.currentState;
+      if (state != null) {
+        state.dismissImmediately();
+      } else {
+        removeEntry();
+      }
+    };
+
+    entry = OverlayEntry(
+      builder: (_) => _GlassVideoMenuOverlay(
+        key: overlayKey,
         anchorRect: anchorRect,
         actions: actions,
         menuItemHeight: menuItemHeight,
+        onRemoved: () {
+          if (_activeDismiss != null) {
+            _activeDismiss = null;
+          }
+          removeEntry();
+        },
       ),
     );
+    overlayState.insert(entry);
   }
 
   @override
@@ -361,166 +392,208 @@ class VideoPopupMenu extends StatelessWidget {
   }
 }
 
-class _GlassVideoMenuRoute extends PopupRoute<void> {
-  _GlassVideoMenuRoute({
+class _GlassVideoMenuOverlay extends StatefulWidget {
+  const _GlassVideoMenuOverlay({
+    super.key,
     required this.anchorRect,
     required this.actions,
     required this.menuItemHeight,
+    required this.onRemoved,
   });
 
   final Rect anchorRect;
   final List<_VideoCustomAction> actions;
   final double menuItemHeight;
+  final VoidCallback onRemoved;
 
   @override
-  Color? get barrierColor => Colors.transparent;
+  State<_GlassVideoMenuOverlay> createState() => _GlassVideoMenuOverlayState();
+}
+
+class _GlassVideoMenuOverlayState extends State<_GlassVideoMenuOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _curved;
+  bool _closing = false;
 
   @override
-  bool get barrierDismissible => true;
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 130),
+    );
+    _curved = CurvedAnimation(
+      parent: _controller,
+      curve: const Cubic(0.2, 0, 0, 1),
+      reverseCurve: Curves.easeIn,
+    );
+    _controller.forward();
+  }
 
   @override
-  String? get barrierLabel => null;
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void dismissImmediately() {
+    if (_closing) return;
+    _closing = true;
+    widget.onRemoved();
+  }
+
+  Future<void> _dismiss() async {
+    if (_closing) return;
+    _closing = true;
+    await _controller.reverse();
+    widget.onRemoved();
+  }
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 180);
-
-  @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 130);
-
-  @override
-  Widget buildPage(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-  ) {
+  Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final estimatedHeight = actions.length * menuItemHeight + 14.0;
+    final estimatedHeight = widget.actions.length * widget.menuItemHeight + 14.0;
     final spaceBelow =
-        mediaQuery.size.height - mediaQuery.padding.bottom - anchorRect.bottom;
+        mediaQuery.size.height -
+        mediaQuery.padding.bottom -
+        widget.anchorRect.bottom;
     final openAbove =
         spaceBelow < estimatedHeight + 12 &&
-        anchorRect.top - mediaQuery.padding.top > spaceBelow;
-    final alignRight = anchorRect.center.dx > mediaQuery.size.width * 0.5;
+        widget.anchorRect.top - mediaQuery.padding.top > spaceBelow;
+    final alignRight = widget.anchorRect.center.dx > mediaQuery.size.width * 0.5;
     final scaleAlignment = Alignment(
       alignRight ? 1.0 : -1.0,
       openAbove ? 1.0 : -1.0,
     );
 
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: const Cubic(0.2, 0, 0, 1),
-      reverseCurve: Curves.easeIn,
-    );
-
-    return CustomSingleChildLayout(
-      delegate: _GlassMenuPositionDelegate(
-        anchorRect: anchorRect,
-        safePadding: mediaQuery.padding,
-        openAbove: openAbove,
-        alignRight: alignRight,
-      ),
-      child: FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
-          alignment: scaleAlignment,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => _dismiss(),
+          ),
+        ),
+        CustomSingleChildLayout(
+          delegate: _GlassMenuPositionDelegate(
+            anchorRect: widget.anchorRect,
+            safePadding: mediaQuery.padding,
+            openAbove: openAbove,
+            alignRight: alignRight,
+          ),
+          child: FadeTransition(
+            opacity: _curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.92, end: 1.0).animate(_curved),
+              alignment: scaleAlignment,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.38 : 0.12,
+                      ),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1D1E22).withValues(alpha: 0.78)
-                        : Colors.white.withValues(alpha: 0.80),
-                    borderRadius: const BorderRadius.all(Radius.circular(16)),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.14)
-                          : Colors.white.withValues(alpha: 0.92),
-                      width: 0.9,
-                    ),
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 168,
-                      maxWidth: 256,
-                    ),
-                    child: IntrinsicWidth(
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: actions.map((action) {
-                            return Material(
-                              type: MaterialType.transparency,
-                              child: InkWell(
-                                borderRadius: const BorderRadius.all(
-                                  Radius.circular(11),
-                                ),
-                                hoverColor:
-                                    (isDark ? Colors.white : Colors.black)
-                                        .withValues(alpha: 0.08),
-                                splashColor:
-                                    (isDark ? Colors.white : Colors.black)
-                                        .withValues(alpha: 0.12),
-                                onTap: () {
-                                  Navigator.of(context).pop();
-                                  action.onTap();
-                                },
-                                child: SizedBox(
-                                  height: menuItemHeight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1D1E22).withValues(alpha: 0.78)
+                            : Colors.white.withValues(alpha: 0.80),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(16),
+                        ),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.14)
+                              : Colors.white.withValues(alpha: 0.92),
+                          width: 0.9,
+                        ),
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 168,
+                          maxWidth: 256,
+                        ),
+                        child: IntrinsicWidth(
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: widget.actions.map((action) {
+                                return Material(
+                                  type: MaterialType.transparency,
+                                  child: InkWell(
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.circular(11),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconTheme(
-                                          data: IconThemeData(
-                                            size: 16,
-                                            color: theme.colorScheme.onSurface
-                                                .withValues(alpha: 0.82),
-                                          ),
-                                          child: action.icon,
+                                    hoverColor:
+                                        (isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.08),
+                                    splashColor:
+                                        (isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.12),
+                                    onTap: () {
+                                      dismissImmediately();
+                                      action.onTap();
+                                    },
+                                    child: SizedBox(
+                                      height: widget.menuItemHeight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
                                         ),
-                                        const SizedBox(width: 9),
-                                        Flexible(
-                                          child: Text(
-                                            action.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 13.5,
-                                              fontWeight: FontWeight.w500,
-                                              color:
-                                                  theme.colorScheme.onSurface,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconTheme(
+                                              data: IconThemeData(
+                                                size: 16,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.82),
+                                              ),
+                                              child: action.icon,
                                             ),
-                                          ),
+                                            const SizedBox(width: 9),
+                                            Flexible(
+                                              child: Text(
+                                                action.title,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                                );
+                              }).toList(),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -530,7 +603,7 @@ class _GlassVideoMenuRoute extends PopupRoute<void> {
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

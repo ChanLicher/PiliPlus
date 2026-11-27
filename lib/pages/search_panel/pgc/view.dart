@@ -47,7 +47,7 @@ class _SearchPgcPanelState
 
   late final gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
     maxCrossAxisExtent: Grid.smallCardWidth * 2,
-    mainAxisExtent: 158,
+    mainAxisExtent: 168,
   );
 
   @override

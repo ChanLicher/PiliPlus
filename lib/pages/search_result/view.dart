@@ -142,24 +142,27 @@ class _SearchResultPageState extends State<SearchResultPage>
                   children: [
                     Row(
                       children: [
-                        _buildGlassBox(
-                          isDark: isDark,
-                          radius: 20,
-                          width: 40,
-                          height: 40,
-                          child: Material(
-                            type: MaterialType.transparency,
-                            child: InkWell(
-                              onTap: Get.back,
-                              customBorder: const CircleBorder(),
-                              hoverColor:
-                                  (isDark ? Colors.white : Colors.black)
-                                      .withValues(alpha: 0.07),
-                              child: Center(
-                                child: Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  size: 17,
-                                  color: theme.colorScheme.onSurface,
+                        _HoverScaleWrap(
+                          scale: 1.05,
+                          child: _buildGlassBox(
+                            isDark: isDark,
+                            radius: 20,
+                            width: 40,
+                            height: 40,
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: InkWell(
+                                onTap: Get.back,
+                                customBorder: const CircleBorder(),
+                                hoverColor:
+                                    (isDark ? Colors.white : Colors.black)
+                                        .withValues(alpha: 0.08),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    size: 17,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
                                 ),
                               ),
                             ),
@@ -226,6 +229,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                         ),
                         splashFactory: NoSplash.splashFactory,
                         padding: const EdgeInsets.symmetric(horizontal: 4),
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 2),
                         controller: _tabController,
                         tabs: SearchType.actives
                             .map(
@@ -233,10 +237,11 @@ class _SearchResultPageState extends State<SearchResultPage>
                                 () {
                                   int count =
                                       _searchResultController.count[item.index];
-                                  return Tab(
-                                    height: 34,
-                                    text:
-                                        '${item.label}${count != -1 ? ' ${count > 99 ? '99+' : count}' : ''}',
+                                  final label =
+                                      '${item.label}${count != -1 ? ' ${count > 99 ? '99+' : count}' : ''}';
+                                  return _HoverGlassTab(
+                                    label: label,
+                                    isDark: isDark,
                                   );
                                 },
                               ),
@@ -341,6 +346,112 @@ class _SearchResultPageState extends State<SearchResultPage>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverScaleWrap extends StatefulWidget {
+  const _HoverScaleWrap({
+    required this.child,
+    this.scale = 1.04,
+  });
+
+  final Widget child;
+  final double scale;
+
+  @override
+  State<_HoverScaleWrap> createState() => _HoverScaleWrapState();
+}
+
+class _HoverScaleWrapState extends State<_HoverScaleWrap> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => _hovered.value = true,
+      onExit: (_) => _hovered.value = false,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _hovered,
+        builder: (context, hovered, child) {
+          return AnimatedScale(
+            scale: hovered ? widget.scale : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: const Cubic(0.2, 0, 0, 1),
+            child: child,
+          );
+        },
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _HoverGlassTab extends StatefulWidget {
+  const _HoverGlassTab({
+    required this.label,
+    required this.isDark,
+  });
+
+  final String label;
+  final bool isDark;
+
+  @override
+  State<_HoverGlassTab> createState() => _HoverGlassTabState();
+}
+
+class _HoverGlassTabState extends State<_HoverGlassTab> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tab(
+      height: 34,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => _hovered.value = true,
+        onExit: (_) => _hovered.value = false,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _hovered,
+          builder: (context, hovered, child) {
+            return AnimatedScale(
+              scale: hovered ? 1.04 : 1.0,
+              duration: const Duration(milliseconds: 140),
+              curve: const Cubic(0.2, 0, 0, 1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                curve: const Cubic(0.2, 0, 0, 1),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: hovered
+                      ? (widget.isDark ? Colors.white : Colors.black)
+                            .withValues(alpha: widget.isDark ? 0.10 : 0.055)
+                      : Colors.transparent,
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                ),
+                child: child,
+              ),
+            );
+          },
+          child: Text(widget.label),
         ),
       ),
     );
