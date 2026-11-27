@@ -4,6 +4,10 @@
 
 本仓库基于 [dev4harmony/PiliPlus](https://github.com/dev4harmony/PiliPlus)（`ohos` 分支）构建，仅记录相对鸿蒙上游分支的差异改动。基础功能、编译环境配置与常见问题请直接参考上游仓库说明。
 
+## 效果演示
+
+https://github.com/user-attachments/assets/7ee4300e-d8d7-4218-ab1a-4017ed236671
+
 ## 相对上游的差异改动
 
 - **鸿蒙原生沉浸光感顶底栏深度定制**

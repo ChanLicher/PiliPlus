@@ -4,6 +4,10 @@
 
 This repository is a personal fork based on the `ohos` branch of [dev4harmony/PiliPlus](https://github.com/dev4harmony/PiliPlus). Only the differences from the HarmonyOS upstream branch are listed below; for general features, build setup, and troubleshooting, please refer to the upstream repository.
 
+## Demo
+
+https://github.com/user-attachments/assets/7ee4300e-d8d7-4218-ab1a-4017ed236671
+
 ## Differences from Upstream
 
 - **HarmonyOS Native Immersive Light Top & Bottom Bar Overhaul**
