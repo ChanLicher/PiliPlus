@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'dart:math';
 
 import 'package:PiliPlus/common/style.dart';
@@ -100,62 +101,149 @@ class _PgcPageState extends State<PgcPage> with AutomaticKeepAliveClientMixin {
                   length: response.length,
                   child: Column(
                     children: [
-                      Row(
-                        children: [
-                          const SizedBox(width: 16),
-                          Text(
-                            '追番时间表',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TabBar(
-                              isScrollable: true,
-                              tabAlignment: TabAlignment.start,
-                              dividerHeight: 0,
-                              overlayColor: const WidgetStatePropertyAll(
-                                Colors.transparent,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 12, 6),
+                        child: Row(
+                          children: [
+                            Text(
+                              '追番时间表',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
-                              splashFactory: NoSplash.splashFactory,
-                              padding: const EdgeInsets.only(right: 10),
-                              indicatorPadding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 10,
-                              ),
-                              indicator: BoxDecoration(
-                                color: theme.colorScheme.secondaryContainer,
-                                borderRadius: const BorderRadius.all(
-                                  Radius.circular(20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: RepaintBoundary(
+                                  child: Builder(
+                                    builder: (context) {
+                                      final isDark =
+                                          theme.brightness == Brightness.dark;
+                                      return Container(
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: isDark
+                                                ? [
+                                                    Colors.white.withValues(
+                                                      alpha: 0.10,
+                                                    ),
+                                                    Colors.white.withValues(
+                                                      alpha: 0.06,
+                                                    ),
+                                                  ]
+                                                : [
+                                                    Colors.white.withValues(
+                                                      alpha: 0.92,
+                                                    ),
+                                                    Colors.white.withValues(
+                                                      alpha: 0.78,
+                                                    ),
+                                                  ],
+                                          ),
+                                          borderRadius: const BorderRadius.all(
+                                            Radius.circular(18),
+                                          ),
+                                          border: Border.all(
+                                            color: isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.13,
+                                                  )
+                                                : Colors.white.withValues(
+                                                    alpha: 0.94,
+                                                  ),
+                                            width: 0.8,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: isDark ? 0.18 : 0.045,
+                                              ),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: const BorderRadius.all(
+                                            Radius.circular(18),
+                                          ),
+                                          child: TabBar(
+                                            isScrollable: true,
+                                            tabAlignment: TabAlignment.start,
+                                            dividerHeight: 0,
+                                            overlayColor:
+                                                const WidgetStatePropertyAll(
+                                                  Colors.transparent,
+                                                ),
+                                            splashFactory:
+                                                NoSplash.splashFactory,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                            ),
+                                            labelPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 2,
+                                                ),
+                                            indicatorPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 2,
+                                                  vertical: 4,
+                                                ),
+                                            indicator: BoxDecoration(
+                                              color: isDark
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.16,
+                                                    )
+                                                  : theme.colorScheme.primary
+                                                        .withValues(
+                                                          alpha: 0.12,
+                                                        ),
+                                              borderRadius:
+                                                  const BorderRadius.all(
+                                                    Radius.circular(15),
+                                                  ),
+                                            ),
+                                            indicatorSize:
+                                                TabBarIndicatorSize.tab,
+                                            labelColor: isDark
+                                                ? Colors.white
+                                                : theme.colorScheme.primary,
+                                            unselectedLabelColor: theme
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.65),
+                                            labelStyle: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            unselectedLabelStyle:
+                                                const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                            dividerColor: Colors.transparent,
+                                            tabs: response.map((item) {
+                                              final text =
+                                                  '${item.date} ${item.isToday == 1 ? '今天' : '周${const ['一', '二', '三', '四', '五', '六', '日'][item.dayOfWeek! - 1]}'}';
+                                              return _PgcHoverTab(
+                                                label: text,
+                                                isDark: isDark,
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              labelColor:
-                                  theme.colorScheme.onSecondaryContainer,
-                              labelStyle:
-                                  TabBarTheme.of(
-                                    context,
-                                  ).labelStyle?.copyWith(fontSize: 14) ??
-                                  const TextStyle(fontSize: 14),
-                              dividerColor: Colors.transparent,
-                              tabs: response.map(
-                                (item) {
-                                  return Tab(
-                                    text:
-                                        '${item.date} ${item.isToday == 1 ? '今天' : '周${const [
-                                                '一',
-                                                '二',
-                                                '三',
-                                                '四',
-                                                '五',
-                                                '六',
-                                                '日',
-                                              ][item.dayOfWeek! - 1]}'}',
-                                  );
-                                },
-                              ).toList(),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Expanded(
                         child: TabBarView(
@@ -366,7 +454,6 @@ class _PgcPageState extends State<PgcPage> with AutomaticKeepAliveClientMixin {
         ),
         const Spacer(),
         IconButton(
-          tooltip: '刷新',
           onPressed: () => controller
             ..followPage = 1
             ..followEnd = false
@@ -436,5 +523,73 @@ class _PgcPageState extends State<PgcPage> with AutomaticKeepAliveClientMixin {
         ),
       ),
     };
+  }
+}
+
+class _PgcHoverTab extends StatefulWidget {
+  const _PgcHoverTab({
+    required this.label,
+    required this.isDark,
+  });
+
+  final String label;
+  final bool isDark;
+
+  @override
+  State<_PgcHoverTab> createState() => _PgcHoverTabState();
+}
+
+class _PgcHoverTabState extends State<_PgcHoverTab> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tab(
+      height: 28,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (event) {
+          if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+            _hovered.value = true;
+          }
+        },
+        onExit: (_) {
+          if (_hovered.value) _hovered.value = false;
+        },
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _hovered,
+          builder: (context, hovered, child) {
+            return AnimatedScale(
+              scale: hovered ? 1.03 : 1.0,
+              duration: const Duration(milliseconds: 140),
+              curve: const Cubic(0.2, 0, 0, 1),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: hovered
+                      ? (widget.isDark ? Colors.white : Colors.black)
+                            .withValues(alpha: widget.isDark ? 0.10 : 0.055)
+                      : Colors.transparent,
+                  borderRadius: const BorderRadius.all(Radius.circular(14)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: child,
+                ),
+              ),
+            );
+          },
+          child: Text(widget.label),
+        ),
+      ),
+    );
   }
 }

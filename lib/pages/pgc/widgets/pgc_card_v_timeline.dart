@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
@@ -9,7 +11,7 @@ import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:material_ui/material_ui.dart';
 
 // 视频卡片 - 垂直布局
-class PgcCardVTimeline extends StatelessWidget {
+class PgcCardVTimeline extends StatefulWidget {
   const PgcCardVTimeline({
     super.key,
     required this.item,
@@ -17,56 +19,146 @@ class PgcCardVTimeline extends StatelessWidget {
 
   final Episode item;
 
-  void onLongPress() => showPgcCover(title: item.title, cover: item.cover);
+  @override
+  State<PgcCardVTimeline> createState() => _PgcCardVTimelineState();
+}
+
+class _PgcCardVTimelineState extends State<PgcCardVTimeline> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    _pressed.dispose();
+    super.dispose();
+  }
+
+  void onLongPress() =>
+      showPgcCover(title: widget.item.title, cover: widget.item.cover);
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: const RoundedRectangleBorder(borderRadius: Style.mdRadius),
-      child: InkWell(
-        borderRadius: Style.mdRadius,
-        onLongPress: onLongPress,
-        onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-        onTap: () => PageUtils.viewPgc(
-          seasonId: item.seasonId,
-          epId: item.episodeId,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: Style.aspectRatio3x4,
-              child: LayoutBuilder(
-                builder: (context, boxConstraints) {
-                  final double maxWidth = boxConstraints.maxWidth;
-                  final double maxHeight = boxConstraints.maxHeight;
-                  return Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      NetworkImgLayer(
-                        src: item.cover,
-                        width: maxWidth,
-                        height: maxHeight,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final item = widget.item;
+    const radius = BorderRadius.all(Radius.circular(14));
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (event) {
+          if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+            _hovered.value = true;
+          }
+        },
+        onExit: (_) {
+          if (_hovered.value) _hovered.value = false;
+        },
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _hovered,
+          builder: (context, hovered, child) {
+            return ValueListenableBuilder<bool>(
+              valueListenable: _pressed,
+              builder: (context, pressed, _) {
+                final double scale = pressed ? 0.975 : (hovered ? 1.018 : 1.0);
+                return AnimatedScale(
+                  scale: scale,
+                  duration: const Duration(milliseconds: 150),
+                  curve: const Cubic(0.2, 0, 0, 1),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(
+                              alpha: hovered ? 0.085 : 0.055,
+                            )
+                          : Colors.white.withValues(
+                              alpha: hovered ? 0.96 : 0.84,
+                            ),
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(
+                                alpha: hovered ? 0.16 : 0.09,
+                              )
+                            : Colors.white.withValues(
+                                alpha: hovered ? 0.98 : 0.90,
+                              ),
+                        width: 0.8,
                       ),
-                      if (item.follow == 1)
-                        const PBadge(
-                          text: '已追番',
-                          right: 6,
-                          top: 6,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark
+                                ? (hovered ? 0.28 : 0.16)
+                                : (hovered ? 0.085 : 0.045),
+                          ),
+                          blurRadius: hovered ? 14 : 9,
+                          offset: Offset(0, hovered ? 5 : 3),
                         ),
-                      PBadge(
-                        text: '${item.pubTime}',
-                        left: 6,
-                        bottom: 6,
-                        type: PBadgeType.gray,
+                      ],
+                    ),
+                    child: child,
+                  ),
+                );
+              },
+            );
+          },
+          child: ClipRRect(
+            borderRadius: radius,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: radius,
+                hoverColor: Colors.transparent,
+                onHighlightChanged: (v) => _pressed.value = v,
+                onLongPress: onLongPress,
+                onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+                onTap: () => PageUtils.viewPgc(
+                  seasonId: item.seasonId,
+                  epId: item.episodeId,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: Style.aspectRatio3x4,
+                      child: LayoutBuilder(
+                        builder: (context, boxConstraints) {
+                          final double maxWidth = boxConstraints.maxWidth;
+                          final double maxHeight = boxConstraints.maxHeight;
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              NetworkImgLayer(
+                                src: item.cover,
+                                width: maxWidth,
+                                height: maxHeight,
+                                borderRadius: BorderRadius.zero,
+                              ),
+                              if (item.follow == 1)
+                                const PBadge(
+                                  text: '已追番',
+                                  right: 6,
+                                  top: 6,
+                                ),
+                              PBadge(
+                                text: '${item.pubTime}',
+                                left: 6,
+                                bottom: 6,
+                                type: PBadgeType.gray,
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ],
-                  );
-                },
+                    ),
+                    content(context),
+                  ],
+                ),
               ),
             ),
-            content(context),
-          ],
+          ),
         ),
       ),
     );
@@ -74,9 +166,10 @@ class PgcCardVTimeline extends StatelessWidget {
 
   Widget content(BuildContext context) {
     final theme = Theme.of(context);
+    final item = widget.item;
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 5, 0, 3),
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -92,6 +185,7 @@ class PgcCardVTimeline extends StatelessWidget {
             Text(
               item.pubIndex ?? '',
               maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: theme.textTheme.labelMedium!.fontSize,
                 color: theme.colorScheme.outline,

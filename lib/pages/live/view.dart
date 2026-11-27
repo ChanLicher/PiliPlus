@@ -84,103 +84,169 @@ class _LivePageState extends State<LivePage>
     final follow = data.first;
     if (follow != null) {
       return LiveSliverPinnedHeader(
-        areaHeight: areaHeight + 16 /* padding */,
-        backgroundColor: colorScheme.surface,
+        areaHeight: areaHeight + 24 /* padding */,
+        backgroundColor: Colors.transparent,
         callback: controller.onTopHeightChanged,
         child: Column(
-          children: [..._buildFollowList(follow), area],
+          children: [_buildFollowCard(follow), area],
         ),
       );
     }
 
     controller.onTopHeightChanged(0.0);
     return SliverPinnedHeader(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: Colors.transparent,
       child: area,
     );
   }
 
+  BoxDecoration _glassCapsuleDecoration(bool isDark, {double radius = 18}) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: isDark
+            ? [
+                Colors.white.withValues(alpha: 0.10),
+                Colors.white.withValues(alpha: 0.06),
+              ]
+            : [
+                Colors.white.withValues(alpha: 0.92),
+                Colors.white.withValues(alpha: 0.78),
+              ],
+      ),
+      borderRadius: BorderRadius.all(Radius.circular(radius)),
+      border: Border.all(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.13)
+            : Colors.white.withValues(alpha: 0.94),
+        width: 0.8,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFollowCard(LiveCardList item) {
+    final isDark = colorScheme.isDark;
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.only(top: 6, bottom: 2),
+        padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+        decoration: _glassCapsuleDecoration(isDark, radius: 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [..._buildFollowList(item)],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLiveArea(List<CardLiveItem> list, double areaHeight) {
+    final isDark = colorScheme.isDark;
     return Padding(
       padding: const .symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              // 10+14*textScaler
-              height: areaHeight,
-              child: Obx(() {
-                final areaIndex = controller.areaIndex.value;
-                return ListView.separated(
-                  scrollDirection: .horizontal,
-                  padding: const .only(right: 8),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  separatorBuilder: (_, _) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final isFirst = index == 0;
-                    late final item = list[index - 1];
-                    final isCurr = index == areaIndex;
-                    return SearchText(
-                      height: 1,
-                      fontSize: 14,
-                      padding: const .symmetric(horizontal: 8, vertical: 5),
-                      text: isFirst ? '推荐' : item.title!,
-                      bgColor: isCurr
-                          ? colorScheme.secondaryContainer
-                          : Colors.transparent,
-                      textColor: isCurr
-                          ? colorScheme.onSecondaryContainer
-                          : null,
-                      onTap: (_) => controller.onSelectArea(
-                        index,
-                        isFirst ? null : item,
-                      ),
+      child: RepaintBoundary(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: _glassCapsuleDecoration(isDark, radius: 18),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  // 10+14*textScaler
+                  height: areaHeight,
+                  child: Obx(() {
+                    final areaIndex = controller.areaIndex.value;
+                    return ListView.separated(
+                      scrollDirection: .horizontal,
+                      padding: const .only(right: 8),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      separatorBuilder: (_, _) => const SizedBox(width: 6),
+                      itemBuilder: (context, index) {
+                        final isFirst = index == 0;
+                        late final item = list[index - 1];
+                        final isCurr = index == areaIndex;
+                        return SearchText(
+                          height: 1,
+                          fontSize: 13.5,
+                          padding: const .symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          text: isFirst ? '推荐' : item.title!,
+                          bgColor: isCurr
+                              ? (isDark
+                                    ? Colors.white.withValues(alpha: 0.16)
+                                    : colorScheme.primary.withValues(
+                                        alpha: 0.12,
+                                      ))
+                              : Colors.transparent,
+                          textColor: isCurr
+                              ? (isDark ? Colors.white : colorScheme.primary)
+                              : colorScheme.onSurface.withValues(alpha: 0.72),
+                          onTap: (_) => controller.onSelectArea(
+                            index,
+                            isFirst ? null : item,
+                          ),
+                        );
+                      },
+                      itemCount: list.length + 1,
                     );
+                  }),
+                ),
+              ),
+              Container(
+                width: 0.8,
+                height: 16,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                color: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.12,
+                ),
+              ),
+              iconButton(
+                size: 28,
+                iconSize: 18,
+                context: context,
+                icon: controller.showFirstFrame
+                    ? const Icon(MdiIcons.alphaFBox)
+                    : const Icon(MdiIcons.image),
+                onPressed: () {
+                  controller.showFirstFrame = !controller.showFirstFrame;
+                  setState(() {});
+                },
+              ),
+              const SizedBox(width: 4),
+              iconButton(
+                size: 28,
+                iconSize: 16,
+                context: context,
+                icon: const Icon(Icons.gamepad),
+                onPressed: () => Get.toNamed(
+                  '/webview',
+                  parameters: {
+                    'uaType': 'mob',
+                    'url':
+                        'https://www.bilibili.com/h5/match/data/home?navhide=1&${ThemeUtils.themeUrl(colorScheme.isDark)}',
                   },
-                  itemCount: list.length + 1,
-                );
-              }),
-            ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              iconButton(
+                size: 28,
+                iconSize: 16,
+                context: context,
+                icon: const Icon(Icons.widgets),
+                onPressed: () => Get.to(const LiveAreaPage()),
+              ),
+            ],
           ),
-          iconButton(
-            size: 26,
-            iconSize: 18,
-            context: context,
-            tooltip: '切换${controller.showFirstFrame ? '封面' : '首帧'}',
-            icon: controller.showFirstFrame
-                ? const Icon(MdiIcons.alphaFBox)
-                : const Icon(MdiIcons.image),
-            onPressed: () {
-              controller.showFirstFrame = !controller.showFirstFrame;
-              setState(() {});
-            },
-          ),
-          const SizedBox(width: 8),
-          iconButton(
-            size: 26,
-            iconSize: 16,
-            context: context,
-            tooltip: '游戏赛事',
-            icon: const Icon(Icons.gamepad),
-            onPressed: () => Get.toNamed(
-              '/webview',
-              parameters: {
-                'uaType': 'mob',
-                'url':
-                    'https://www.bilibili.com/h5/match/data/home?navhide=1&${ThemeUtils.themeUrl(colorScheme.isDark)}',
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          iconButton(
-            size: 26,
-            iconSize: 16,
-            context: context,
-            tooltip: '全部标签',
-            icon: const Icon(Icons.widgets),
-            onPressed: () => Get.to(const LiveAreaPage()),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -209,38 +275,65 @@ class _LivePageState extends State<LivePage>
         slivers: [
           if (controller.newTags case final newTags? when newTags.isNotEmpty)
             SliverPinnedHeader(
-              backgroundColor: colorScheme.surface,
-              child: SizedBox(
-                // 8+10+13*textScaler
-                height: 18.0 + textScaler.scale(13),
-                child: Obx(() {
-                  final tagIndex = controller.tagIndex.value;
-                  return ListView.separated(
-                    scrollDirection: .horizontal,
-                    padding: const .only(bottom: 8),
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      final item = newTags[index];
-                      final isCurr = index == tagIndex;
-                      return SearchText(
-                        height: 1,
-                        fontSize: 13,
-                        padding: const .symmetric(horizontal: 8, vertical: 5),
-                        text: item.name!,
-                        bgColor: isCurr
-                            ? colorScheme.secondaryContainer
-                            : Colors.transparent,
-                        textColor: isCurr
-                            ? colorScheme.onSecondaryContainer
-                            : null,
-                        onTap: (value) =>
-                            controller.onSelectTag(index, item.sortType),
-                      );
-                    },
-                    itemCount: newTags.length,
-                  );
-                }),
+              backgroundColor: Colors.transparent,
+              child: Padding(
+                padding: const .only(bottom: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: RepaintBoundary(
+                    child: Container(
+                      height: 18.0 + textScaler.scale(13),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: _glassCapsuleDecoration(
+                        colorScheme.isDark,
+                        radius: 16,
+                      ),
+                      child: Obx(() {
+                        final isDark = colorScheme.isDark;
+                        final tagIndex = controller.tagIndex.value;
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          scrollDirection: .horizontal,
+                          separatorBuilder: (_, _) => const SizedBox(width: 6),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            final item = newTags[index];
+                            final isCurr = index == tagIndex;
+                            return SearchText(
+                              height: 1,
+                              fontSize: 12.5,
+                              padding: const .symmetric(
+                                horizontal: 9,
+                                vertical: 4,
+                              ),
+                              text: item.name!,
+                              bgColor: isCurr
+                                  ? (isDark
+                                        ? Colors.white.withValues(alpha: 0.16)
+                                        : colorScheme.primary.withValues(
+                                            alpha: 0.12,
+                                          ))
+                                  : Colors.transparent,
+                              textColor: isCurr
+                                  ? (isDark
+                                        ? Colors.white
+                                        : colorScheme.primary)
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.72,
+                                    ),
+                              onTap: (value) =>
+                                  controller.onSelectTag(index, item.sortType),
+                            );
+                          },
+                          itemCount: newTags.length,
+                        );
+                      }),
+                    ),
+                  ),
+                ),
               ),
             ),
           response != null && response.isNotEmpty

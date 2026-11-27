@@ -49,32 +49,76 @@ class _RankPageState extends State<RankPage>
   }
 
   Widget _buildTab(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     // 顶部留白需 Obx 包裹：顶栏是否生效（异步就绪 / 横竖屏切换）、
     // topBarCollapsed 收起变化后自动重建。高度直接复用
     // NativeTopSpacer.staticHeight（未启用时返回 0），与右侧 ZonePage 列表
     // 顶部的 Sliver 留白语义对齐——两者都按「首页分类数 + 顶栏收起状态」
     // 计算，避免硬编码 magic number 导致左右不对称。
     return Obx(
-      () => VerticalTabBar(
-        dividerWidth: 0,
-        isScrollable: true,
-        indicatorWeight: 3,
-        indicatorSize: .tab,
-        controller: _rankController.tabController,
-        padding: .only(
-          top: NativeTopSpacer.staticHeight(context),
-          bottom: MediaQuery.paddingOf(context).bottom + 105,
+      () => Padding(
+        padding: EdgeInsets.fromLTRB(
+          8,
+          NativeTopSpacer.staticHeight(context) + 6,
+          4,
+          MediaQuery.paddingOf(context).bottom + 105,
         ),
-        tabs: RankType.values.map((e) => VerticalTab(text: e.label)).toList(),
-        onTap: (index) {
-          if (!_rankController.tabController.indexIsChanging) {
-            _rankController.animateToTop();
-          } else {
-            _rankController
-              ..tabIndex.value = index
-              ..tabController.animateTo(index);
-          }
-        },
+        child: RepaintBoundary(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDark
+                    ? [
+                        Colors.white.withValues(alpha: 0.09),
+                        Colors.white.withValues(alpha: 0.05),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.90),
+                        Colors.white.withValues(alpha: 0.76),
+                      ],
+              ),
+              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.13)
+                    : Colors.white.withValues(alpha: 0.94),
+                width: 0.85,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              child: VerticalTabBar(
+                dividerWidth: 0,
+                isScrollable: true,
+                indicatorWeight: 3,
+                indicatorSize: .tab,
+                controller: _rankController.tabController,
+                padding: const .symmetric(vertical: 6),
+                tabs: RankType.values
+                    .map((e) => VerticalTab(text: e.label))
+                    .toList(),
+                onTap: (index) {
+                  if (!_rankController.tabController.indexIsChanging) {
+                    _rankController.animateToTop();
+                  } else {
+                    _rankController
+                      ..tabIndex.value = index
+                      ..tabController.animateTo(index);
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

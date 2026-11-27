@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
@@ -247,8 +249,16 @@ class _VideoCardVState extends State<VideoCardV>
       child: ScaleTransition(
         scale: _scaleAnim,
         child: MouseRegion(
-          onEnter: (_) => _hovered.value = true,
-          onExit: (_) => _hovered.value = false,
+          onHover: (event) {
+            if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+              _hovered.value = true;
+            }
+          },
+          onExit: (_) {
+            if (_hovered.value) {
+              _hovered.value = false;
+            }
+          },
           child: ListenableBuilder(
             listenable: Listenable.merge([_pressed, _hovered]),
             child: contentStack,
