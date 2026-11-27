@@ -1,7 +1,9 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:material_ui/material_ui.dart';
 
-class ActionRowLineItem extends StatelessWidget {
+class ActionRowLineItem extends StatefulWidget {
   const ActionRowLineItem({
     super.key,
     required this.selectStatus,
@@ -17,51 +19,111 @@ class ActionRowLineItem extends StatelessWidget {
   final Widget? icon;
 
   @override
+  State<ActionRowLineItem> createState() => _ActionRowLineItemState();
+}
+
+class _ActionRowLineItemState extends State<ActionRowLineItem> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.of(context);
-    return Material(
-      color: selectStatus ? colorScheme.secondaryContainer : null,
-      type: selectStatus ? MaterialType.canvas : MaterialType.transparency,
-      borderRadius: const BorderRadius.all(Radius.circular(30)),
-      child: InkWell(
-        borderRadius: const BorderRadius.all(Radius.circular(30)),
-        onTap: () => {
-          feedBack(),
-          onTap?.call(),
-        },
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(13, 5.5, 13, 4.5),
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(Radius.circular(30)),
-            border: Border.all(
-              color: selectStatus
-                  ? Colors.transparent
-                  : colorScheme.secondaryContainer,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (iconData != null)
-                Icon(
-                  iconData,
-                  size: 13,
-                  color: selectStatus
-                      ? colorScheme.onSecondaryContainer
-                      : colorScheme.outline,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final selected = widget.selectStatus;
+    const radius = BorderRadius.all(Radius.circular(30));
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (event) {
+        if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+          _hovered.value = true;
+        }
+      },
+      onExit: (_) {
+        if (_hovered.value) _hovered.value = false;
+      },
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _hovered,
+        builder: (context, hovered, child) {
+          final bg = selected
+              ? (isDark
+                    ? Colors.white.withValues(alpha: 0.16)
+                    : colorScheme.primary.withValues(alpha: 0.12))
+              : hovered
+              ? (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: isDark ? 0.10 : 0.055,
                 )
-              else
-                ?icon,
-              Text(
-                text!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: selectStatus
-                      ? colorScheme.onSecondaryContainer
-                      : colorScheme.outline,
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.03));
+          return AnimatedScale(
+            scale: hovered ? 1.04 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: const Cubic(0.2, 0, 0, 1),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: radius,
+                border: Border.all(
+                  color: selected
+                      ? (isDark
+                            ? Colors.white.withValues(alpha: 0.22)
+                            : colorScheme.primary.withValues(alpha: 0.24))
+                      : (isDark
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : Colors.black.withValues(alpha: 0.07)),
+                  width: 0.8,
                 ),
               ),
-            ],
+              child: child,
+            ),
+          );
+        },
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          child: InkWell(
+            borderRadius: radius,
+            hoverColor: Colors.transparent,
+            onTap: () => {
+              feedBack(),
+              widget.onTap?.call(),
+            },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(13, 5.5, 13, 4.5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.iconData != null)
+                    Icon(
+                      widget.iconData,
+                      size: 13,
+                      color: selected
+                          ? (isDark ? Colors.white : colorScheme.primary)
+                          : colorScheme.outline,
+                    )
+                  else
+                    ?widget.icon,
+                  Text(
+                    widget.text!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected
+                          ? (isDark ? Colors.white : colorScheme.primary)
+                          : colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -69,7 +131,7 @@ class ActionRowLineItem extends StatelessWidget {
   }
 }
 
-class ActionIconItem extends StatelessWidget {
+class ActionIconItem extends StatefulWidget {
   const ActionIconItem({
     super.key,
     required this.tooltip,
@@ -82,29 +144,78 @@ class ActionIconItem extends StatelessWidget {
   final IconData iconData;
 
   @override
+  State<ActionIconItem> createState() => _ActionIconItemState();
+}
+
+class _ActionIconItemState extends State<ActionIconItem> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.of(context);
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        type: .transparency,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () => {
-            feedBack(),
-            onTap(),
-          },
-          child: Container(
-            padding: const .all(5),
-            decoration: BoxDecoration(
-              shape: .circle,
-              border: Border.all(color: colorScheme.secondaryContainer),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (event) {
+        if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+          _hovered.value = true;
+        }
+      },
+      onExit: (_) {
+        if (_hovered.value) _hovered.value = false;
+      },
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _hovered,
+        builder: (context, hovered, child) {
+          return AnimatedScale(
+            scale: hovered ? 1.06 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: const Cubic(0.2, 0, 0, 1),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: .circle,
+                color: hovered
+                    ? (isDark ? Colors.white : Colors.black).withValues(
+                        alpha: isDark ? 0.12 : 0.06,
+                      )
+                    : (isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.03)),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.07),
+                  width: 0.8,
+                ),
+              ),
+              child: child,
             ),
-            child: Icon(
-              iconData,
-              size: 20,
-              color: colorScheme.onSurfaceVariant,
+          );
+        },
+        child: Material(
+          type: .transparency,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            hoverColor: Colors.transparent,
+            onTap: () => {
+              feedBack(),
+              widget.onTap(),
+            },
+            child: Padding(
+              padding: const .all(5),
+              child: Icon(
+                widget.iconData,
+                size: 20,
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),

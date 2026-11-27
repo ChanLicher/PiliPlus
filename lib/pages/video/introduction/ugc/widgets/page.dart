@@ -193,14 +193,34 @@ class _PagePanelState extends State<PagePanel> {
   Widget _buildItem(int index) {
     final isCurr = _isCurr && _index == index;
     final item = _parts[index];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const itemRadius = BorderRadius.all(Radius.circular(10));
     return Container(
       width: kPageItemExtent,
       margin: index != _parts.length - 1 ? const .only(right: 10) : null,
+      decoration: BoxDecoration(
+        color: isCurr
+            ? (isDark
+                  ? Colors.white.withValues(alpha: 0.14)
+                  : colorScheme.primary.withValues(alpha: 0.10))
+            : (isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.035)),
+        borderRadius: itemRadius,
+        border: Border.all(
+          color: isCurr
+              ? colorScheme.primary.withValues(alpha: isDark ? 0.45 : 0.30)
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.10)
+                    : Colors.black.withValues(alpha: 0.06)),
+          width: 0.8,
+        ),
+      ),
       child: Material(
-        color: colorScheme.onInverseSurface,
-        borderRadius: const .all(.circular(6)),
+        type: MaterialType.transparency,
+        borderRadius: itemRadius,
         child: InkWell(
-          borderRadius: const .all(.circular(6)),
+          borderRadius: itemRadius,
           onTap: () {
             if (widget.onDownload case final onDownload?) {
               if (onDownload(item) && mounted) {
@@ -230,7 +250,7 @@ class _PagePanelState extends State<PagePanel> {
                     ),
                     borderRadius: const .only(
                       topLeft: .circular(2),
-                      bottomRight: .circular(6),
+                      bottomRight: .circular(10),
                     ),
                   ),
                   child: Text(

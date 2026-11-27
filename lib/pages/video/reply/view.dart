@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:PiliPlus/common/skeleton/video_reply.dart';
 import 'package:PiliPlus/common/sliver_single_child_delegate.dart';
 import 'package:PiliPlus/common/style.dart';
@@ -80,37 +82,119 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
             key: const PageStorageKey(_VideoReplyPanelState),
             slivers: [
               SliverFloatingHeaderWidget(
-                backgroundColor: colorScheme.surface,
-                child: Padding(
-                  padding: const .fromLTRB(12, 2.5, 6, 2.5),
-                  child: Obx(() {
-                    final sortType = controller.sortType.value;
-                    return Row(
-                      mainAxisAlignment: .spaceBetween,
-                      children: [
-                        Text(
-                          sortType.desc,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        TextButton.icon(
-                          style: Style.buttonStyle,
-                          onPressed: controller.queryBySort,
-                          icon: Icon(
-                            Icons.sort,
-                            size: 16,
-                            color: colorScheme.secondary,
-                          ),
-                          label: Text(
-                            sortType.descShort,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: colorScheme.secondary,
+                backgroundColor: Colors.transparent,
+                child: Builder(
+                  builder: (context) {
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
+                    return Padding(
+                      padding: const .fromLTRB(12, 4, 12, 6),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: RepaintBoundary(
+                          child: Container(
+                            height: 36,
+                            padding: const EdgeInsets.only(left: 14, right: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: isDark
+                                    ? [
+                                        Colors.white.withValues(alpha: 0.10),
+                                        Colors.white.withValues(alpha: 0.06),
+                                      ]
+                                    : [
+                                        Colors.white.withValues(alpha: 0.92),
+                                        Colors.white.withValues(alpha: 0.78),
+                                      ],
+                              ),
+                              borderRadius: const BorderRadius.all(
+                                Radius.circular(18),
+                              ),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.13)
+                                    : Colors.white.withValues(alpha: 0.94),
+                                width: 0.8,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: isDark ? 0.20 : 0.05,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
+                            child: Obx(() {
+                              final sortType = controller.sortType.value;
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    sortType.desc,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 0.8,
+                                    height: 14,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    color:
+                                        (isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.12),
+                                  ),
+                                  Material(
+                                    type: MaterialType.transparency,
+                                    child: InkWell(
+                                      borderRadius: const BorderRadius.all(
+                                        Radius.circular(14),
+                                      ),
+                                      hoverColor:
+                                          (isDark ? Colors.white : Colors.black)
+                                              .withValues(alpha: 0.06),
+                                      onTap: controller.queryBySort,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          spacing: 4,
+                                          children: [
+                                            Icon(
+                                              Icons.sort,
+                                              size: 15,
+                                              color: colorScheme.primary,
+                                            ),
+                                            Text(
+                                              sortType.descShort,
+                                              style: TextStyle(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w500,
+                                                color: colorScheme.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
                           ),
                         ),
-                      ],
+                      ),
                     );
-                  }),
+                  },
                 ),
               ),
               Obx(() => _buildBody(controller.loadingState.value)),
@@ -123,19 +207,71 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                 right: kFloatingActionButtonMargin,
                 bottom: kFloatingActionButtonMargin + padding.bottom,
               ),
-              child: FloatingActionButton(
-                heroTag: null,
-                onPressed: () {
-                  feedBack();
-                  controller.onReply(
-                    null,
-                    oid: controller.videoCtr.aid,
-                    replyType: controller.replyType,
-                    mentionItem: controller.mentionItem,
+              child: Builder(
+                builder: (context) {
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.36 : 0.14,
+                          ),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isDark
+                                ? const Color(0xFF23252A)
+                                      .withValues(alpha: 0.78)
+                                : Colors.white.withValues(alpha: 0.84),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.16)
+                                  : Colors.white.withValues(alpha: 0.94),
+                              width: 0.9,
+                            ),
+                          ),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              hoverColor:
+                                  (isDark ? Colors.white : Colors.black)
+                                      .withValues(alpha: 0.08),
+                              onTap: () {
+                                feedBack();
+                                controller.onReply(
+                                  null,
+                                  oid: controller.videoCtr.aid,
+                                  replyType: controller.replyType,
+                                  mentionItem: controller.mentionItem,
+                                );
+                              },
+                              child: Center(
+                                child: Icon(
+                                  Icons.reply,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   );
                 },
-                tooltip: '发表评论',
-                child: const Icon(Icons.reply),
               ),
             ),
           ),

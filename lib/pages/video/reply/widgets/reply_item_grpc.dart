@@ -116,6 +116,53 @@ Widget _replyItemLayout({
     );
   }
 
+  if (depth < 0) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const cardRadius = BorderRadius.all(Radius.circular(16));
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.055)
+                : Colors.white.withValues(alpha: 0.84),
+            borderRadius: cardRadius,
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : Colors.white.withValues(alpha: 0.92),
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: cardRadius,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: cardRadius,
+                hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.035,
+                ),
+                onTap: onTap,
+                onLongPress: onLongPress,
+                onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   if (needDivider) {
     child = Column(
       mainAxisSize: MainAxisSize.min,

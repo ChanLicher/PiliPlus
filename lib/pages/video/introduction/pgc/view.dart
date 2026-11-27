@@ -73,49 +73,87 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
   Widget build(BuildContext context) {
     final item = introController.pgcItem;
     final isPortrait = widget.isPortrait;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Widget sliver = SliverToBoxAdapter(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 10,
-            children: [
-              _buildCover(item),
-              Expanded(child: _buildInfoPanel(isPortrait, item)),
+      child: RepaintBoundary(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [
+                      Colors.white.withValues(alpha: 0.08),
+                      Colors.white.withValues(alpha: 0.045),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.92),
+                      Colors.white.withValues(alpha: 0.80),
+                    ],
+            ),
+            borderRadius: const BorderRadius.all(Radius.circular(18)),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.white.withValues(alpha: 0.94),
+              width: 0.85,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-          const SizedBox(height: 6),
-          // 点赞收藏转发 布局样式2
-          if (introController.isPgc) actionGrid(item.stat!, introController),
-          if (isPortrait ||
-              !videoDetailCtr.plPlayerController.horizontalSeasonPanel) ...[
-            // seasons
-            if (item.hasSeasons)
-              Padding(
-                padding: const .only(top: 5),
-                child: SeasonPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 10,
+                children: [
+                  _buildCover(item),
+                  Expanded(child: _buildInfoPanel(isPortrait, item)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 点赞收藏转发 布局样式2
+              if (introController.isPgc)
+                actionGrid(item.stat!, introController),
+              if (isPortrait ||
+                  !videoDetailCtr
+                      .plPlayerController
+                      .horizontalSeasonPanel) ...[
+                // seasons
+                if (item.hasSeasons)
+                  Padding(
+                    padding: const .only(top: 5),
+                    child: SeasonPanel(
+                      pgcController: introController,
+                      onSeasonChanged: () {
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ),
+                // 番剧分集
+                if (item.hasEpisodes)
+                  EpisodePanel(
+                    pgcController: introController,
+                    showEpisodes: widget.showEpisodes,
+                    onChangeEpisode: introController.onChangeEpisode,
+                  ),
+              ],
+              if (item.hasSections)
+                SectionPanel(
                   pgcController: introController,
-                  onSeasonChanged: () {
-                    if (mounted) setState(() {});
-                  },
+                  showEpisodes: widget.showEpisodes,
+                  onChangeEpisode: introController.onChangeEpisode,
                 ),
-              ),
-            // 番剧分集
-            if (item.hasEpisodes)
-              EpisodePanel(
-                pgcController: introController,
-                showEpisodes: widget.showEpisodes,
-                onChangeEpisode: introController.onChangeEpisode,
-              ),
-          ],
-          if (item.hasSections)
-            SectionPanel(
-              pgcController: introController,
-              showEpisodes: widget.showEpisodes,
-              onChangeEpisode: introController.onChangeEpisode,
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
     if (!introController.isPgc) {
@@ -126,9 +164,9 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
     }
     return SliverPadding(
       padding: const .fromLTRB(
-        Style.safeSpace,
-        Style.safeSpace,
-        Style.safeSpace,
+        Style.safeSpace - 2,
+        8,
+        Style.safeSpace - 2,
         Style.safeSpace + 50,
       ),
       sliver: sliver,
@@ -175,6 +213,7 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
               width: 115,
               height: 153,
               src: item.cover!,
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
             ),
           ),
         ),
@@ -195,7 +234,6 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
               return iconButton(
                 size: 28,
                 iconSize: 26,
-                tooltip: '${isFav ? '取消' : ''}收藏',
                 onPressed: () => introController.onFavPugv(isFav),
                 icon: isFav
                     ? const Icon(Icons.star_rounded)
@@ -404,10 +442,18 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
   }
 
   Widget actionGrid(PgcStat stat, PgcIntroController introController) {
-    return SizedBox(
-      height: 48,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.045)
+            : Colors.black.withValues(alpha: 0.03),
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Obx(
             () => ActionItem(

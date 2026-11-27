@@ -95,24 +95,60 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
   Widget build(BuildContext context) {
     final isPortrait = widget.isPortrait;
     final isHorizontal = !isPortrait && widget.isHorizontal;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SliverPadding(
-      padding: const .only(
-        left: Style.safeSpace,
-        right: Style.safeSpace,
-        top: 10,
+      padding: const .fromLTRB(
+        Style.safeSpace - 2,
+        8,
+        Style.safeSpace - 2,
+        4,
       ),
       sliver: Obx(
         () {
           final videoDetail = introController.videoDetail.value;
           final isLoading = videoDetail.bvid == null;
           return SliverToBoxAdapter(
-            child: GestureDetector(
-              onTap: () {
-                if (isLoading) return;
-                feedBack();
-                introController.expand.toggle();
-              },
-              child: TranslucentColumn(
+            child: RepaintBoundary(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isDark
+                        ? [
+                            Colors.white.withValues(alpha: 0.08),
+                            Colors.white.withValues(alpha: 0.045),
+                          ]
+                        : [
+                            Colors.white.withValues(alpha: 0.92),
+                            Colors.white.withValues(alpha: 0.80),
+                          ],
+                  ),
+                  borderRadius: const BorderRadius.all(Radius.circular(18)),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.white.withValues(alpha: 0.94),
+                    width: 0.85,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.22 : 0.05,
+                      ),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    if (isLoading) return;
+                    feedBack();
+                    introController.expand.toggle();
+                  },
+                  child: TranslucentColumn(
                 crossAxisAlignment: .start,
                 children: [
                   NoTranslucentArea(
@@ -207,7 +243,9 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
                 ],
               ),
             ),
-          );
+          ),
+        ),
+      );
         },
       ),
     );
@@ -472,10 +510,18 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
     UgcIntroController introController,
     VideoStat? stat,
   ) {
-    return SizedBox(
-      height: 48,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.045)
+            : Colors.black.withValues(alpha: 0.03),
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+      ),
       child: Row(
-        crossAxisAlignment: .start,
+        crossAxisAlignment: .center,
         children: [
           Obx(
             () => ActionItem(

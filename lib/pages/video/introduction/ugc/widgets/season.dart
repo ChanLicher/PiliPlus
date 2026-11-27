@@ -63,48 +63,70 @@ class _SeasonPanelState extends State<SeasonPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const radius = BorderRadius.all(Radius.circular(12));
     return Padding(
-      padding: const .only(top: 8, left: 2, right: 2),
-      child: Material(
-        color: colorScheme.onInverseSurface,
-        borderRadius: const .all(.circular(6)),
-        child: InkWell(
-          borderRadius: const .all(.circular(6)),
-          onTap: widget.canTap
-              ? () => widget.showEpisodes(type: .season)
-              : null,
-          child: Padding(
-            padding: const .fromLTRB(8, 12, 8, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '合集：${_ugcSeason.title}',
-                    style: const TextStyle(fontSize: 12),
-                    maxLines: 1,
-                    overflow: .ellipsis,
+      padding: const .only(top: 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.035),
+          borderRadius: radius,
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.06),
+            width: 0.8,
+          ),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          child: InkWell(
+            borderRadius: radius,
+            hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+              alpha: 0.05,
+            ),
+            onTap: widget.canTap
+                ? () => widget.showEpisodes(type: .season)
+                : null,
+            child: Padding(
+              padding: const .fromLTRB(10, 11, 10, 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '合集：${_ugcSeason.title}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: .ellipsis,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 15),
-                Image.asset(
-                  Assets.livingStatic,
-                  color: colorScheme.primary,
-                  height: 12,
-                  cacheHeight: 12.cacheSize(context),
-                  semanticLabel: "正在播放：",
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  '${_seasonIndex + 1}/${_ugcSeason.sections![_sectionIndex].episodes!.length}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.arrow_forward_ios_outlined,
-                  size: 13,
-                  semanticLabel: '查看',
-                ),
-              ],
+                  const SizedBox(width: 15),
+                  Image.asset(
+                    Assets.livingStatic,
+                    color: colorScheme.primary,
+                    height: 12,
+                    cacheHeight: 12.cacheSize(context),
+                    semanticLabel: "正在播放：",
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${_seasonIndex + 1}/${_ugcSeason.sections![_sectionIndex].episodes!.length}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.arrow_forward_ios_outlined,
+                    size: 13,
+                    semanticLabel: '查看',
+                  ),
+                ],
+              ),
             ),
           ),
         ),

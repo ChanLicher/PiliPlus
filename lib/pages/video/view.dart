@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -1542,15 +1543,65 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     }
 
     final flag = !needIndicator || tabs.length == 1;
+    final isDark = theme.brightness == Brightness.dark;
+    final capsuleDeco = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: isDark
+            ? [
+                Colors.white.withValues(alpha: 0.10),
+                Colors.white.withValues(alpha: 0.06),
+              ]
+            : [
+                Colors.white.withValues(alpha: 0.92),
+                Colors.white.withValues(alpha: 0.78),
+              ],
+      ),
+      borderRadius: const BorderRadius.all(Radius.circular(18)),
+      border: Border.all(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.13)
+            : Colors.white.withValues(alpha: 0.94),
+        width: 0.8,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+
     Widget tabBar() => TabBar(
-      labelColor: flag ? colorScheme.onSurface : null,
-      indicator: flag ? const BoxDecoration() : null,
-      padding: EdgeInsets.zero,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      splashFactory: NoSplash.splashFactory,
+      labelColor: flag
+          ? colorScheme.onSurface
+          : (isDark ? Colors.white : colorScheme.primary),
+      unselectedLabelColor: colorScheme.onSurface.withValues(alpha: 0.65),
+      indicatorWeight: 0,
+      indicatorPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+      indicatorSize: TabBarIndicatorSize.tab,
+      indicator: flag
+          ? const BoxDecoration()
+          : BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.16)
+                  : colorScheme.primary.withValues(alpha: 0.12),
+              borderRadius: const BorderRadius.all(Radius.circular(15)),
+            ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       controller: videoDetailController.tabCtr,
-      labelStyle:
-          TabBarTheme.of(context).labelStyle?.copyWith(fontSize: 13) ??
-          const TextStyle(fontSize: 13),
-      labelPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+      ),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 2),
       dividerColor: Colors.transparent,
       dividerHeight: 0,
       onTap: (value) {
@@ -1579,26 +1630,22 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         if (text == '评论') {
           return Obx(() {
             final count = _videoReplyController.count.value;
-            return Tab(
-              text: '评论${count == -1 ? '' : ' ${NumUtils.numFormat(count)}'}',
+            return _VideoHoverTab(
+              label:
+                  '评论${count == -1 ? '' : ' ${NumUtils.numFormat(count)}'}',
+              isDark: isDark,
             );
           });
         } else {
-          return Tab(text: text);
+          return _VideoHoverTab(label: text, isDark: isDark);
         }
       }).toList(),
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.dividerColor.withValues(alpha: 0.1),
-          ),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
       child: SizedBox(
-        height: 45,
+        height: 36,
         child: Row(
           children: [
             if (tabs.isEmpty)
@@ -1606,60 +1653,105 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
             else
               Expanded(
                 child: Align(
-                  alignment: .centerLeft,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 96.0 * tabs.length),
-                    child: tabBar(),
-                  ),
-                ),
-              ),
-            SizedBox(
-              height: 32,
-              child: TextButton(
-                style: const ButtonStyle(
-                  padding: WidgetStatePropertyAll(.zero),
-                ),
-                onPressed: videoDetailController.showShootDanmakuSheet,
-                child: Text(
-                  '发弹幕',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox.square(
-              dimension: 38,
-              child: Obx(
-                () {
-                  final ctr = videoDetailController.plPlayerController;
-                  final enableShowDanmaku = ctr.enableShowDanmaku.value;
-                  return IconButton(
-                    onPressed: () {
-                      final newVal = !enableShowDanmaku;
-                      ctr.enableShowDanmaku.value = newVal;
-                      if (!ctr.tempPlayerConf) {
-                        GStorage.setting.put(
-                          SettingBoxKey.enableShowDanmaku,
-                          newVal,
-                        );
-                      }
-                    },
-                    icon: Icon(
-                      size: 22,
-                      enableShowDanmaku
-                          ? CustomIcons.dm_on
-                          : CustomIcons.dm_off,
-                      color: enableShowDanmaku
-                          ? colorScheme.secondary
-                          : colorScheme.outline,
+                  alignment: Alignment.centerLeft,
+                  child: RepaintBoundary(
+                    child: Container(
+                      height: 36,
+                      decoration: capsuleDeco,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(18),
+                        ),
+                        child: tabBar(),
+                      ),
                     ),
-                  );
-                },
+                  ),
+                ),
+              ),
+            const SizedBox(width: 8),
+            RepaintBoundary(
+              child: Container(
+                height: 36,
+                decoration: capsuleDeco,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(18)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          onTap: videoDetailController.showShootDanmakuSheet,
+                          hoverColor: (isDark ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.06),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              '发弹幕',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 0.8,
+                        height: 16,
+                        color: (isDark ? Colors.white : Colors.black)
+                            .withValues(alpha: 0.12),
+                      ),
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Obx(
+                          () {
+                            final ctr =
+                                videoDetailController.plPlayerController;
+                            final enableShowDanmaku =
+                                ctr.enableShowDanmaku.value;
+                            return Material(
+                              type: MaterialType.transparency,
+                              child: InkWell(
+                                hoverColor:
+                                    (isDark ? Colors.white : Colors.black)
+                                        .withValues(alpha: 0.06),
+                                onTap: () {
+                                  final newVal = !enableShowDanmaku;
+                                  ctr.enableShowDanmaku.value = newVal;
+                                  if (!ctr.tempPlayerConf) {
+                                    GStorage.setting.put(
+                                      SettingBoxKey.enableShowDanmaku,
+                                      newVal,
+                                    );
+                                  }
+                                },
+                                child: Center(
+                                  child: Icon(
+                                    size: 20,
+                                    enableShowDanmaku
+                                        ? CustomIcons.dm_on
+                                        : CustomIcons.dm_off,
+                                    color: enableShowDanmaku
+                                        ? colorScheme.primary
+                                        : colorScheme.outline,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 14),
           ],
         ),
       ),
@@ -2215,5 +2307,73 @@ class NoOverscrollBehavior extends MaterialScrollBehavior {
     ScrollableDetails details,
   ) {
     return child;
+  }
+}
+
+class _VideoHoverTab extends StatefulWidget {
+  const _VideoHoverTab({
+    required this.label,
+    required this.isDark,
+  });
+
+  final String label;
+  final bool isDark;
+
+  @override
+  State<_VideoHoverTab> createState() => _VideoHoverTabState();
+}
+
+class _VideoHoverTabState extends State<_VideoHoverTab> {
+  final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tab(
+      height: 28,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (event) {
+          if (event.kind == PointerDeviceKind.mouse && !_hovered.value) {
+            _hovered.value = true;
+          }
+        },
+        onExit: (_) {
+          if (_hovered.value) _hovered.value = false;
+        },
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _hovered,
+          builder: (context, hovered, child) {
+            return AnimatedScale(
+              scale: hovered ? 1.03 : 1.0,
+              duration: const Duration(milliseconds: 140),
+              curve: const Cubic(0.2, 0, 0, 1),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: hovered
+                      ? (widget.isDark ? Colors.white : Colors.black)
+                            .withValues(alpha: widget.isDark ? 0.10 : 0.055)
+                      : Colors.transparent,
+                  borderRadius: const BorderRadius.all(Radius.circular(14)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: child,
+                ),
+              ),
+            );
+          },
+          child: Text(widget.label),
+        ),
+      ),
+    );
   }
 }
