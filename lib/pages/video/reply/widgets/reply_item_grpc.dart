@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' show ImageFilter;
 
 import 'package:PiliPlus/common/assets.dart';
 import 'package:PiliPlus/common/constants.dart';
@@ -65,7 +66,13 @@ part 'package:PiliPlus/common/widgets/context_menu/reply_menu_helper.dart';
 const _replyTextButtonStyle = ButtonStyle(
   visualDensity: VisualDensity.compact,
   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-  padding: WidgetStatePropertyAll(EdgeInsets.zero),
+  padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+  minimumSize: WidgetStatePropertyAll(Size(0, 30)),
+  shape: WidgetStatePropertyAll(
+    RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+    ),
+  ),
 );
 
 final _colorsLight = [
@@ -178,9 +185,13 @@ Widget _replyItemLayout({
     );
   }
 
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   return Material(
     type: MaterialType.transparency,
     child: InkWell(
+      hoverColor: (isDark ? Colors.white : Colors.black).withValues(
+        alpha: 0.035,
+      ),
       onTap: onTap,
       onLongPress: onLongPress,
       onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
@@ -384,16 +395,31 @@ Widget _replySubReplyListLayout({
   required BuildContext context,
   required List<Widget> items,
 }) {
-  final colorScheme = ColorScheme.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  const radius = BorderRadius.all(Radius.circular(12));
   return Padding(
     padding: const EdgeInsets.only(left: 42, right: 4),
-    child: Material(
-      animationDuration: Duration.zero,
-      color: colorScheme.onInverseSurface,
-      borderRadius: const BorderRadius.all(Radius.circular(6)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: items,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.045)
+            : Colors.black.withValues(alpha: 0.032),
+        borderRadius: radius,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.045),
+          width: 0.7,
+        ),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: items,
+        ),
       ),
     ),
   );
@@ -401,15 +427,15 @@ Widget _replySubReplyListLayout({
 
 (EdgeInsets, BorderRadius?) _subReplyDecoration(int index, int length) {
   if (length == 1) {
-    return const (.fromLTRB(8, 5, 8, 5), .all(.circular(6)));
+    return const (.fromLTRB(10, 6, 10, 6), .all(.circular(12)));
   }
   if (index == 0) {
-    return const (.fromLTRB(8, 8, 8, 4), .vertical(top: .circular(6)));
+    return const (.fromLTRB(10, 8, 10, 4), .vertical(top: .circular(12)));
   }
   if (index == length - 1) {
-    return const (.fromLTRB(8, 4, 8, 8), .vertical(bottom: .circular(6)));
+    return const (.fromLTRB(10, 4, 10, 8), .vertical(bottom: .circular(12)));
   }
-  return const (.fromLTRB(8, 4, 8, 4), null);
+  return const (.fromLTRB(10, 4, 10, 4), null);
 }
 
 Widget _morePanelLayout({
@@ -417,31 +443,76 @@ Widget _morePanelLayout({
   required List<Widget> items,
 }) {
   final colorScheme = ColorScheme.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  const radius = BorderRadius.all(Radius.circular(22));
   return Padding(
-    padding: EdgeInsets.only(
-      bottom: MediaQuery.viewPaddingOf(context).bottom + 20,
+    padding: EdgeInsets.fromLTRB(
+      12,
+      0,
+      12,
+      MediaQuery.viewPaddingOf(context).bottom + 12,
     ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        InkWell(
-          onTap: Get.back,
-          borderRadius: Style.bottomSheetRadius,
-          child: SizedBox(
-            height: 35,
-            child: Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colorScheme.outline,
-                  borderRadius: const .all(.circular(3)),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.14),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xCC1E1F24)
+                  : Colors.white.withValues(alpha: 0.88),
+              borderRadius: radius,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.14)
+                    : Colors.white.withValues(alpha: 0.95),
+                width: 0.9,
+              ),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: Get.back,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(22),
+                      ),
+                      child: SizedBox(
+                        height: 32,
+                        child: Center(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: colorScheme.outline.withValues(alpha: 0.45),
+                              borderRadius: const .all(.circular(3)),
+                            ),
+                            child: const SizedBox(width: 34, height: 3.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    ...items,
+                  ],
                 ),
-                child: const SizedBox(width: 32, height: 3),
               ),
             ),
           ),
         ),
-        ...items,
-      ],
+      ),
     ),
   );
 }
@@ -499,6 +570,8 @@ class ReplyItemGrpc extends StatelessWidget {
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
     constraints: BoxConstraints(
       maxWidth: min(640, MediaQuery.sizeOf(context).shortestSide),
     ),
@@ -984,6 +1057,8 @@ class ReplyItemGrpc extends StatelessWidget {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       constraints: BoxConstraints(
         maxWidth: min(640, MediaQuery.sizeOf(context).shortestSide),
       ),
@@ -1062,12 +1137,12 @@ class ReplyItemGrpc extends StatelessWidget {
     return InkWell(
       onTap: () => replyReply?.call(replyItem, null),
       borderRadius: isSingle
-          ? const .all(.circular(6))
-          : const .vertical(bottom: .circular(6)),
+          ? const .all(.circular(12))
+          : const .vertical(bottom: .circular(12)),
       child: Padding(
         padding: isSingle
-            ? const .fromLTRB(8, 6, 8, 6)
-            : const .fromLTRB(8, 5, 8, 8),
+            ? const .fromLTRB(10, 6, 10, 6)
+            : const .fromLTRB(10, 5, 10, 8),
         child: Text.rich(
           TextSpan(
             style: const TextStyle(fontSize: 12),
@@ -1431,44 +1506,26 @@ class ReplyItemGrpc extends StatelessWidget {
           ListTile(
             onTap: () async {
               Get.back();
-              bool? isDelete = await showDialog<bool>(
+              bool isDelete = await showConfirmDialog(
                 context: context,
-                builder: (context) {
-                  final colorScheme = ColorScheme.of(context);
-                  return AlertDialog(
-                    title: const Text('删除评论'),
-                    content: Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(text: '确定删除这条评论吗？\n\n'),
-                          if (ownerMid != item.member.mid) ...[
-                            TextSpan(
-                              text: '@${item.member.name}',
-                              style: TextStyle(color: colorScheme.primary),
-                            ),
-                            const TextSpan(text: ':\n'),
-                          ],
-                          TextSpan(text: message),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Get.back(result: false),
-                        child: Text(
-                          '取消',
-                          style: TextStyle(color: colorScheme.outline),
+                title: const Text('删除评论'),
+                content: Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(text: '确定删除这条评论吗？\n\n'),
+                      if (ownerMid != item.member.mid) ...[
+                        TextSpan(
+                          text: '@${item.member.name}',
+                          style: TextStyle(color: colorScheme.primary),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () => Get.back(result: true),
-                        child: const Text('确定'),
-                      ),
+                        const TextSpan(text: ':\n'),
+                      ],
+                      TextSpan(text: message),
                     ],
-                  );
-                },
+                  ),
+                ),
               );
-              if (isDelete == null || !isDelete) {
+              if (!isDelete) {
                 return;
               }
               SmartDialog.showLoading(msg: '删除中...');

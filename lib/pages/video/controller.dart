@@ -1196,27 +1196,18 @@ class VideoDetailController extends GetxController
         ),
       );
     }
-    if (plPlayerController.isFullScreen.value || showVideoSheet) {
-      final child = PostPanel(
-        enableSlide: false,
-        videoDetailController: this,
-        plPlayerController: plPlayerController,
-      );
-      PageUtils.showVideoBottomSheet(
-        context,
-        child: plPlayerController.darkVideoPage
-            ? Theme(data: ThemeUtils.darkTheme, child: child)
-            : child,
-      );
-    } else {
-      childKey.currentState?.showBottomSheet(
-        constraints: const BoxConstraints(),
-        (context) => PostPanel(
-          videoDetailController: this,
-          plPlayerController: plPlayerController,
-        ),
-      );
-    }
+    final child = PostPanel(
+      enableSlide: false,
+      videoDetailController: this,
+      plPlayerController: plPlayerController,
+    );
+    PageUtils.showVideoBottomSheet(
+      context,
+      maxWidth: 512,
+      child: plPlayerController.darkVideoPage
+          ? Theme(data: ThemeUtils.darkTheme, child: child)
+          : child,
+    );
   }
 
   late final showVP = true.obs;

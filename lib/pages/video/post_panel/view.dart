@@ -75,7 +75,6 @@ class PostPanel extends CommonSlidePage {
             iconButton(
               context: context,
               size: 26,
-              tooltip: '设为当前',
               icon: const Icon(Icons.my_location),
               onPressed: () {
                 updateSegment(
@@ -89,7 +88,6 @@ class PostPanel extends CommonSlidePage {
             iconButton(
               context: context,
               size: 26,
-              tooltip: isFirst ? '视频开头' : '视频结尾',
               icon: isFirst
                   ? const Icon(Icons.first_page)
                   : const Icon(Icons.last_page),
@@ -105,7 +103,6 @@ class PostPanel extends CommonSlidePage {
             iconButton(
               context: context,
               size: 26,
-              tooltip: '编辑',
               icon: const Icon(Icons.edit),
               onPressed: () async {
                 String initV = value;

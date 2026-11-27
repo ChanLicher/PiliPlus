@@ -1685,7 +1685,11 @@ class HeaderControlState extends State<HeaderControl>
   static const btnHeight = 34.0;
   static final btnStyle = ButtonStyle(
     padding: const WidgetStatePropertyAll(.zero),
-    shape: const WidgetStatePropertyAll(CircleBorder()),
+    shape: const WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+    ),
     overlayColor: WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.pressed)) {
         return Colors.white.withValues(alpha: 0.24);

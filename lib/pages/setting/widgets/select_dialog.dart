@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'dart:async';
 
 import 'package:PiliPlus/http/browser_ua.dart';
@@ -32,34 +33,96 @@ class SelectDialog<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleMedium = TextTheme.of(context).titleMedium!;
-    return AlertDialog(
-      clipBehavior: Clip.hardEdge,
-      title: Text(title),
-      constraints: subtitleBuilder != null
-          ? const BoxConstraints.tightFor(width: 320)
-          : null,
-      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-      content: Material(
-        type: MaterialType.transparency,
-        child: SingleChildScrollView(
-          child: RadioGroup<T>(
-            onChanged: (v) => Navigator.of(context).pop(v ?? value),
-            groupValue: value,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                values.length,
-                (index) {
-                  final item = values[index];
-                  return RadioListTile<T>(
-                    toggleable: toggleable,
-                    dense: true,
-                    value: item.$1,
-                    title: Text(item.$2, style: titleMedium),
-                    subtitle: subtitleBuilder?.call(context, index, item.$1),
-                  );
-                },
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final titleMedium = theme.textTheme.titleMedium!;
+    const dialogRadius = BorderRadius.all(Radius.circular(22));
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: subtitleBuilder != null ? 360 : 320,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.72,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: dialogRadius,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.44 : 0.16),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: dialogRadius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1D1E22).withValues(alpha: 0.82)
+                      : Colors.white.withValues(alpha: 0.88),
+                  borderRadius: dialogRadius,
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.14)
+                        : Colors.white.withValues(alpha: 0.94),
+                    width: 0.9,
+                  ),
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+                        child: Text(
+                          title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: RadioGroup<T>(
+                            onChanged: (v) =>
+                                Navigator.of(context).pop(v ?? value),
+                            groupValue: value,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(
+                                values.length,
+                                (index) {
+                                  final item = values[index];
+                                  return RadioListTile<T>(
+                                    toggleable: toggleable,
+                                    dense: true,
+                                    value: item.$1,
+                                    title: Text(item.$2, style: titleMedium),
+                                    subtitle: subtitleBuilder?.call(
+                                      context,
+                                      index,
+                                      item.$1,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

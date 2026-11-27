@@ -83,23 +83,29 @@ class PlayOrPauseButtonState extends State<PlayOrPauseButton>
               return ValueListenableBuilder<bool>(
                 valueListenable: _pressed,
                 builder: (context, pressed, _) {
-                  final scale = pressed ? 0.94 : (hovered ? 1.08 : 1.0);
-                  return AnimatedScale(
-                    scale: scale,
-                    duration: const Duration(milliseconds: 130),
-                    curve: const Cubic(0.2, 0, 0, 1),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: pressed
-                            ? Colors.white.withValues(alpha: 0.24)
-                            : hovered
-                            ? Colors.white.withValues(alpha: 0.16)
-                            : Colors.transparent,
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(12),
+                  final scale = pressed ? 0.94 : (hovered ? 1.04 : 1.0);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    child: AnimatedScale(
+                      scale: scale,
+                      duration: const Duration(milliseconds: 130),
+                      curve: const Cubic(0.2, 0, 0, 1),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: pressed
+                              ? Colors.white.withValues(alpha: 0.24)
+                              : hovered
+                              ? Colors.white.withValues(alpha: 0.16)
+                              : Colors.transparent,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(10),
+                          ),
                         ),
+                        child: child,
                       ),
-                      child: child,
                     ),
                   );
                 },

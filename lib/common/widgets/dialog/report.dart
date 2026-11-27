@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/common/widgets/radio_widget.dart';
 import 'package:PiliPlus/http/loading_state.dart';
@@ -65,129 +67,247 @@ Future<void> autoWrapReportDialog(
 
   return showDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      title: title,
-      titlePadding: const .only(left: 22, top: 16, right: 22),
-      contentPadding: const .symmetric(vertical: 5),
-      actionsPadding: const .only(left: 16, right: 16, bottom: 10),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                child: Builder(
-                  builder: (context) => Column(
+    builder: (context) {
+      final theme = Theme.of(context);
+      final colorScheme = theme.colorScheme;
+      final isDark = theme.brightness == Brightness.dark;
+      const radius = BorderRadius.all(Radius.circular(22));
+      final subtleBtnStyle = TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        backgroundColor: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.04),
+      );
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.14),
+                  blurRadius: 28,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: radius,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xCC1E1F24)
+                        : Colors.white.withValues(alpha: 0.88),
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : Colors.white.withValues(alpha: 0.95),
+                      width: 0.9,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: .only(left: 22, right: 22, bottom: 5),
-                        child: Text('请选择举报的理由：'),
-                      ),
-                      RadioGroup(
-                        onChanged: (value) {
-                          updateReasonType(value);
-                          (context as Element).markNeedsBuild();
-                        },
-                        groupValue: reasonType,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: options.entries.map((entry) {
-                            return WrapRadioOptionsGroup<int>(
-                              groupTitle: entry.key,
-                              options: entry.value,
-                            );
-                          }).toList(),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 18, 16, 8),
+                        child: DefaultTextStyle.merge(
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                          child: title,
                         ),
                       ),
-                      if (isWithContent)
-                        Padding(
-                          padding: const .only(left: 22, top: 5, right: 22),
-                          child: TextFormField(
-                            key: key,
-                            minLines: 2,
-                            maxLines: 4,
-                            initialValue: reasonDesc,
-                            autofocus: isContentRequired,
-                            decoration: const InputDecoration(
-                              labelText: '为帮助审核人员更快处理，请补充问题类型和出现位置等详细信息',
-                              border: OutlineInputBorder(),
-                              contentPadding: .all(10),
-                              labelStyle: TextStyle(fontSize: 14),
-                              floatingLabelStyle: TextStyle(fontSize: 14),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            child: Builder(
+                              builder: (context) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: .only(
+                                      left: 22,
+                                      right: 22,
+                                      bottom: 5,
+                                    ),
+                                    child: Text('请选择举报的理由：'),
+                                  ),
+                                  RadioGroup(
+                                    onChanged: (value) {
+                                      updateReasonType(value);
+                                      (context as Element).markNeedsBuild();
+                                    },
+                                    groupValue: reasonType,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: options.entries.map((entry) {
+                                        return WrapRadioOptionsGroup<int>(
+                                          groupTitle: entry.key,
+                                          options: entry.value,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  if (isWithContent)
+                                    Padding(
+                                      padding: const .only(
+                                        left: 22,
+                                        top: 6,
+                                        right: 22,
+                                        bottom: 4,
+                                      ),
+                                      child: TextFormField(
+                                        key: key,
+                                        minLines: 2,
+                                        maxLines: 4,
+                                        initialValue: reasonDesc,
+                                        autofocus: isContentRequired,
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              '为帮助审核人员更快处理，请补充问题类型和出现位置等详细信息',
+                                          filled: true,
+                                          fillColor: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                )
+                                              : Colors.black.withValues(
+                                                  alpha: 0.03,
+                                                ),
+                                          border: const OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                              Radius.circular(12),
+                                            ),
+                                          ),
+                                          contentPadding: const .all(10),
+                                          labelStyle: const TextStyle(
+                                            fontSize: 14,
+                                          ),
+                                          floatingLabelStyle: const TextStyle(
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        onChanged: (value) =>
+                                            reasonDesc = value,
+                                        validator: (value) =>
+                                            isContentRequired &&
+                                                value.isNullOrEmpty
+                                            ? '理由不能为空'
+                                            : null,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                            onChanged: (value) => reasonDesc = value,
-                            validator: (value) =>
-                                isContentRequired && value.isNullOrEmpty
-                                ? '理由不能为空'
-                                : null,
                           ),
                         ),
+                      ),
+                      if (mid != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 6),
+                          child: CheckBoxText(
+                            text: '拉黑该用户',
+                            onChanged: (value) => banUid = value,
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          spacing: 8,
+                          children: [
+                            if (mid != null)
+                              TextButton(
+                                style: subtleBtnStyle,
+                                onPressed: () {
+                                  Get.back();
+                                  Pref.setBlackMid(mid());
+                                  onRemove?.call();
+                                },
+                                child: const Text('本地屏蔽'),
+                              ),
+                            TextButton(
+                              style: subtleBtnStyle,
+                              onPressed: Get.back,
+                              child: Text(
+                                '取消',
+                                style: TextStyle(color: colorScheme.outline),
+                              ),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
+                                backgroundColor: colorScheme.primary.withValues(
+                                  alpha: isDark ? 0.22 : 0.12,
+                                ),
+                              ),
+                              onPressed: () async {
+                                if (reasonType == null ||
+                                    (isContentRequired &&
+                                        key.currentState?.validate() != true)) {
+                                  return;
+                                }
+                                SmartDialog.showLoading();
+                                try {
+                                  final res = await onReport(
+                                    reasonType!,
+                                    isWithContent ? reasonDesc : null,
+                                    banUid,
+                                  );
+                                  SmartDialog.dismiss();
+                                  if (res.isSuccess) {
+                                    Get.back();
+                                    SmartDialog.showToast('举报成功');
+                                  } else {
+                                    res.toast();
+                                  }
+                                } catch (e, s) {
+                                  SmartDialog.dismiss();
+                                  SmartDialog.showToast('提交失败：$e');
+                                  Utils.reportError(e, s);
+                                }
+                              },
+                              child: Text(
+                                '确定',
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          if (mid != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 14, top: 6),
-              child: CheckBoxText(
-                text: '拉黑该用户',
-                onChanged: (value) => banUid = value,
-              ),
-            ),
-        ],
-      ),
-      actions: [
-        if (mid != null)
-          TextButton(
-            onPressed: () {
-              Get.back();
-              Pref.setBlackMid(mid());
-              onRemove?.call();
-            },
-            child: const Text('本地屏蔽'),
-          ),
-        TextButton(
-          onPressed: Get.back,
-          child: Text(
-            '取消',
-            style: TextStyle(color: ColorScheme.of(context).outline),
-          ),
         ),
-        TextButton(
-          onPressed: () async {
-            if (reasonType == null ||
-                (isContentRequired && key.currentState?.validate() != true)) {
-              return;
-            }
-            SmartDialog.showLoading();
-            try {
-              final res = await onReport(
-                reasonType!,
-                isWithContent ? reasonDesc : null,
-                banUid,
-              );
-              SmartDialog.dismiss();
-              if (res.isSuccess) {
-                Get.back();
-                SmartDialog.showToast('举报成功');
-              } else {
-                res.toast();
-              }
-            } catch (e, s) {
-              SmartDialog.dismiss();
-              SmartDialog.showToast('提交失败：$e');
-              Utils.reportError(e, s);
-            }
-          },
-          child: const Text('确定'),
-        ),
-      ],
-    ),
+      );
+    },
   );
 }
 
@@ -220,6 +340,7 @@ class _CheckBoxTextState extends State<CheckBoxText> {
   Widget build(BuildContext context) {
     final colorScheme = ColorScheme.of(context);
     return InkWell(
+      borderRadius: const BorderRadius.all(Radius.circular(10)),
       onTap: () {
         setState(() {
           _selected = !_selected;

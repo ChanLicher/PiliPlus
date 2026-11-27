@@ -486,7 +486,7 @@ struct Index {
             style: { badgeSize: 8, badgeColor: this.navSelected, borderColor: $r('sys.color.comp_common_contrary') }
           }) {
             SymbolGlyph(navTabSymbol(typeIndex))
-              .fontSize(26)
+              .fontSize(28)
               .fontColor(
                 [this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED,
                   this.currentNavIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
@@ -508,7 +508,7 @@ struct Index {
             }
           }) {
             SymbolGlyph(navTabSymbol(typeIndex))
-              .fontSize(26)
+              .fontSize(28)
               .fontColor(
                 [this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED,
                   this.currentNavIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])
@@ -518,7 +518,7 @@ struct Index {
         }
       } else {
         SymbolGlyph(navTabSymbol(typeIndex))
-          .fontSize(26)
+          .fontSize(28)
           .fontColor(
             [this.currentNavIndex === index ? this.navSelected : NAV_UNSELECTED,
               this.currentNavIndex === index ? this.navSelectedSub : $r('sys.color.icon_tertiary')])

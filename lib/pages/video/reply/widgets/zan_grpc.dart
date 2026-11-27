@@ -97,12 +97,28 @@ class ZanButtonGrpc extends StatelessWidget {
     final action = replyItem.replyControl.action;
     final isLike = action == $fixnum.Int64.ONE;
     final isDislike = action == $fixnum.Int64.TWO;
+    final isDark = theme.brightness == Brightness.dark;
     final outline = theme.colorScheme.outline;
     final primary = theme.colorScheme.primary;
-    final ButtonStyle style = TextButton.styleFrom(
-      padding: EdgeInsets.zero,
+    final activeBg = primary.withValues(alpha: isDark ? 0.18 : 0.10);
+    const pillShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+    );
+    final ButtonStyle likeStyle = TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      minimumSize: const Size(0, 30),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
+      shape: pillShape,
+      backgroundColor: isLike ? activeBg : null,
+    );
+    final ButtonStyle dislikeStyle = TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(34, 30),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+      shape: pillShape,
+      backgroundColor: isDislike ? activeBg : null,
     );
 
     @pragma('vm:prefer-inline')
@@ -122,16 +138,12 @@ class ZanButtonGrpc extends StatelessWidget {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      spacing: 4,
       children: [
         SizedBox(
-          height: 32,
+          height: 30,
           child: TextButton(
-            style: const ButtonStyle(
-              visualDensity: .compact,
-              tapTargetSize: .shrinkWrap,
-              padding: WidgetStatePropertyAll(.zero),
-              minimumSize: WidgetStatePropertyAll(.square(40)),
-            ),
+            style: dislikeStyle,
             onPressed: isLogin
                 ? () => wrapProcessing(onHateReply)
                 : _toastNotLogin,
@@ -139,16 +151,16 @@ class ZanButtonGrpc extends StatelessWidget {
               isDislike
                   ? FontAwesomeIcons.solidThumbsDown
                   : FontAwesomeIcons.thumbsDown,
-              size: 16,
+              size: 15,
               color: isDislike ? primary : outline,
               semanticLabel: isDislike ? '已踩' : '点踩',
             ),
           ),
         ),
         SizedBox(
-          height: 32,
+          height: 30,
           child: TextButton(
-            style: style,
+            style: likeStyle,
             onPressed: isLogin
                 ? () => wrapProcessing(onLikeReply)
                 : _toastNotLogin,
@@ -159,7 +171,7 @@ class ZanButtonGrpc extends StatelessWidget {
                   isLike
                       ? FontAwesomeIcons.solidThumbsUp
                       : FontAwesomeIcons.thumbsUp,
-                  size: 16,
+                  size: 15,
                   color: isLike ? primary : outline,
                   semanticLabel: isLike ? '已赞' : '点赞',
                 ),
@@ -168,6 +180,7 @@ class ZanButtonGrpc extends StatelessWidget {
                   style: TextStyle(
                     color: isLike ? primary : outline,
                     fontSize: theme.textTheme.labelSmall!.fontSize,
+                    fontWeight: isLike ? FontWeight.w600 : null,
                   ),
                 ),
               ],
