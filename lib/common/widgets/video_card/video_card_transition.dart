@@ -1,11 +1,13 @@
 import 'dart:async' show Completer;
+import 'dart:math' as math;
 
+import 'package:flutter/physics.dart' show SpringDescription, SpringSimulation;
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
 
 const double _cardRadius = 12;
 
-const double _scrimOpacity = 0.35;
+const double _scrimOpacity = 0.28;
 
 const double _horizontalAspect = 1.35;
 
@@ -21,21 +23,72 @@ const Curve _veilFadeCurve = Interval(
   curve: Curves.easeInOut,
 );
 
-const Curve _openCurve = Cubic(0.20, 0.90, 0.15, 1.0);
+/// 基于 Apple WWDC Fluid Interfaces / SwiftUI Spring 公式的真实物理弹簧曲线：
+/// stiffness = (2π / response)², damping = 4π * dampingRatio / response
+/// 起步爆发快、尾段按指数渐近阻尼温柔吸附，避免普通贝塞尔末段“按死刹停”的机械感。
+class _AppleSpringCurve extends Curve {
+  _AppleSpringCurve({
+    required double response,
+    required double dampingRatio,
+    required double durationSeconds,
+  }) : _durationSeconds = durationSeconds,
+       _sim = SpringSimulation(
+         SpringDescription(
+           mass: 1.0,
+           stiffness: math.pow(2 * math.pi / response, 2).toDouble(),
+           damping: 4 * math.pi * dampingRatio / response,
+         ),
+         0.0,
+         1.0,
+         0.0,
+       ) {
+    _endValue = _sim.x(_durationSeconds);
+  }
 
-const Curve _openPortraitCurve = Cubic(0.22, 0.86, 0.16, 1.0);
+  final double _durationSeconds;
+  final SpringSimulation _sim;
+  late final double _endValue;
+
+  @override
+  double transformInternal(double t) {
+    if (t <= 0.0) return 0.0;
+    if (t >= 1.0) return 1.0;
+    final x = _sim.x(t * _durationSeconds);
+    return _endValue == 0.0 ? t : x / _endValue;
+  }
+}
+
+/// 进场弹簧：response=0.38s, dampingRatio=0.95（轻盈起跳 + 柔和指数收尾）
+final Curve _openCurve = _AppleSpringCurve(
+  response: 0.38,
+  dampingRatio: 0.95,
+  durationSeconds: 0.48,
+);
+
+/// 竖屏进场弹簧：略稳重一点，避免大跨度纵向缩放显得飘
+final Curve _openPortraitCurve = _AppleSpringCurve(
+  response: 0.40,
+  dampingRatio: 0.97,
+  durationSeconds: 0.48,
+);
 
 Curve _openCurveFor(bool horizontal) =>
     horizontal ? _openCurve : _openPortraitCurve;
 
-const Curve _closeCurve = Cubic(0.22, 0.84, 0.18, 1.0);
+/// 退场弹簧（非对称设计）：刚度更高（response=0.34s）+ 严格临界阻尼（1.0，零回弹），
+/// 脱手利落、末段平滑磁吸回卡片原位。
+final Curve _closeCurve = _AppleSpringCurve(
+  response: 0.34,
+  dampingRatio: 1.0,
+  durationSeconds: 0.44,
+);
 
-/// 入场进度到此值即认为页面已就位，播放页据此开始取流（0.45 ≈ 189ms）
-const double _entryContentReadyAt = 0.45;
+/// 入场进度到此值即认为页面已就位，播放页据此开始取流（0.38 ≈ 182ms）
+const double _entryContentReadyAt = 0.38;
 
-const Duration videoPageTransitionDuration = Duration(milliseconds: 420);
+const Duration videoPageTransitionDuration = Duration(milliseconds: 480);
 
-const Duration videoPageReverseTransitionDuration = Duration(milliseconds: 380);
+const Duration videoPageReverseTransitionDuration = Duration(milliseconds: 440);
 
 const double _paintEpsilon = 0.02;
 
@@ -69,7 +122,7 @@ void _releaseSnapshotSlot() {
 }
 
 /// 新页面压上来时下层页面（首页）下沉的缩放幅度
-const double _belowPageSinkScale = 0.07;
+const double _belowPageSinkScale = 0.06;
 
 /// 下层页面（首页）的快照持有策略：
 /// - false（默认，保持原行为）：整个播放页驻留期都持有整屏快照，返回时复用
@@ -635,16 +688,18 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
             // 飞行卡片圆角：贴近卡片时取卡片圆角，展开到全屏时收敛到 0
             final cardRadius = fallback
                 ? 0.0
-                : _cardRadius * (returning ? contraction : 1 - expansion);
+                : _cardRadius *
+                      (returning ? contraction : 1 - expansion).clamp(0.0, 1.0);
             final scrimAlpha =
-                _scrimOpacity * (returning ? (1 - contraction) : expansion);
+                _scrimOpacity *
+                (returning ? (1 - contraction) : expansion).clamp(0.0, 1.0);
             final scrimVisible =
                 !fallback &&
                 animation.status != AnimationStatus.completed &&
                 scrimAlpha > _paintEpsilon;
-            // 返回收尾阶段（后 22%）平滑淡出页面纹理，无缝过渡到下方真实卡片，消除末帧硬切感
-            final pageOpacity = (!fallback && returning && contraction > 0.78)
-                ? (1 - (contraction - 0.78) / 0.22).clamp(0.0, 1.0)
+            // 弹簧退场前 200ms 快速飞向卡片，后段在 0.86->1.0 之间温柔吸附并淡出纹理，无缝落回真实卡片
+            final pageOpacity = (!fallback && returning && contraction > 0.86)
+                ? (1 - (contraction - 0.86) / 0.14).clamp(0.0, 1.0)
                 : 1.0;
             final ticking =
                 !_freezePageWhileFlying ||
