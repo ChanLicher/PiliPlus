@@ -87,54 +87,68 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = theme.brightness == Brightness.dark;
-    const sheetRadius = BorderRadius.all(Radius.circular(20));
+    const sheetRadius = BorderRadius.all(Radius.circular(22));
     Widget child = ViewSafeArea(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: sheetRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.16),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+      child: Column(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: Get.back,
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: sheetRadius,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1D1E22).withValues(alpha: 0.82)
-                          : Colors.white.withValues(alpha: 0.88),
-                      borderRadius: sheetRadius,
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.14)
-                            : Colors.white.withValues(alpha: 0.94),
-                        width: 0.9,
-                      ),
-                    ),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...buildInputView(),
-                          buildImagePreview(),
-                          Flexible(
-                            child: buildPanelContainer(Colors.transparent),
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: sheetRadius,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.42 : 0.16,
+                              ),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: sheetRadius,
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xCC1E1F24)
+                                    : Colors.white.withValues(alpha: 0.88),
+                                borderRadius: sheetRadius,
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.14)
+                                      : Colors.white.withValues(alpha: 0.95),
+                                  width: 0.9,
+                                ),
+                              ),
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ...buildInputView(),
+                                    buildImagePreview(),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -142,7 +156,12 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
               ),
             ),
           ),
-        ),
+          buildPanelContainer(
+            isDark
+                ? const Color(0xD91A1B20)
+                : Colors.white.withValues(alpha: 0.92),
+          ),
+        ],
       ),
     );
     return darkVideoPage ? Theme(data: theme, child: child) : child;

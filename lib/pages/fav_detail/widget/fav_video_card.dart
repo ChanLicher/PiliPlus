@@ -1,6 +1,7 @@
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/button/icon_button.dart';
+import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/select_mask.dart';
@@ -16,11 +17,12 @@ import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
 
 // 收藏视频卡片 - 水平布局
-class FavVideoCardH extends StatelessWidget {
+class FavVideoCardH extends StatefulWidget {
   final FavDetailItemModel item;
   final int? index;
   final BaseFavController? ctr;
@@ -32,9 +34,17 @@ class FavVideoCardH extends StatelessWidget {
     this.ctr,
   }) : assert(ctr == null || index != null);
 
-  bool get isSort => ctr == null;
+  @override
+  State<FavVideoCardH> createState() => _FavVideoCardHState();
+}
+
+class _FavVideoCardHState extends State<FavVideoCardH> {
+  bool _hovered = false;
+
+  bool get isSort => widget.ctr == null;
 
   void _onTap() {
+    final item = widget.item;
     // 0/4/16/...: 正常；9: up自己删除；1: 其他原因删除
     if (const [1, 9].contains(item.attr)) {
       Get.toNamed('/member?mid=${item.upper?.mid}');
@@ -56,16 +66,20 @@ class FavVideoCardH extends StatelessWidget {
         );
         break;
       default:
-        ctr!.onViewFav(item, index);
+        widget.ctr!.onViewFav(item, widget.index);
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
+    final ctr = widget.ctr;
     final isOwner = !isSort && ctr!.isOwner;
     late final enableMultiSelect = ctr?.enableMultiSelect.value ?? false;
     final colorScheme = ColorScheme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const radius = BorderRadius.all(Radius.circular(14));
 
     final onLongPress = isSort || enableMultiSelect
         ? null
@@ -81,74 +95,119 @@ class FavVideoCardH extends StatelessWidget {
             bvid: item.bvid,
           );
 
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: isSort
-            ? null
-            : enableMultiSelect
-            ? () => ctr!.onSelect(item)
-            : _onTap,
-        onLongPress: onLongPress,
-        onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.safeSpace,
-            vertical: 5,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AspectRatio(
-                aspectRatio: Style.aspectRatio,
-                child: LayoutBuilder(
-                  builder: (context, boxConstraints) {
-                    double maxWidth = boxConstraints.maxWidth;
-                    double maxHeight = boxConstraints.maxHeight;
-                    return Stack(
-                      clipBehavior: Clip.none,
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: 4,
+        ),
+        child: MouseRegion(
+          onHover: (e) {
+            if (e.kind == PointerDeviceKind.mouse && !_hovered) {
+              setState(() => _hovered = true);
+            }
+          },
+          onExit: (_) {
+            if (_hovered) setState(() => _hovered = false);
+          },
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: _hovered ? 0.085 : 0.055)
+                  : Colors.white.withValues(alpha: _hovered ? 0.93 : 0.85),
+              borderRadius: radius,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: _hovered ? 0.17 : 0.10)
+                    : Colors.white.withValues(alpha: 0.95),
+                width: 0.85,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(
+                    alpha: isDark
+                        ? (_hovered ? 0.28 : 0.18)
+                        : (_hovered ? 0.08 : 0.04),
+                  ),
+                  blurRadius: _hovered ? 14 : 9,
+                  offset: Offset(0, _hovered ? 5 : 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: radius,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: isSort
+                      ? null
+                      : enableMultiSelect
+                      ? () => ctr!.onSelect(item)
+                      : _onTap,
+                  onLongPress: onLongPress,
+                  onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        NetworkImgLayer(
-                          src: item.cover,
-                          width: maxWidth,
-                          height: maxHeight,
-                        ),
-                        PBadge(
-                          text: DurationUtils.formatDuration(item.duration),
-                          right: 6.0,
-                          bottom: 6.0,
-                          type: PBadgeType.gray,
-                        ),
-                        if (item.type == 12)
-                          const PBadge(
-                            text: '音频',
-                            top: 6.0,
-                            right: 6.0,
-                            type: PBadgeType.gray,
-                          )
-                        else
-                          PBadge(
-                            text: item.ogv?.typeName,
-                            top: 6.0,
-                            right: 6.0,
-                            bottom: null,
-                            left: null,
+                        AspectRatio(
+                          aspectRatio: Style.aspectRatio,
+                          child: LayoutBuilder(
+                            builder: (context, boxConstraints) {
+                              double maxWidth = boxConstraints.maxWidth;
+                              double maxHeight = boxConstraints.maxHeight;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  NetworkImgLayer(
+                                    src: item.cover,
+                                    width: maxWidth,
+                                    height: maxHeight,
+                                  ),
+                                  PBadge(
+                                    text: DurationUtils.formatDuration(
+                                      item.duration,
+                                    ),
+                                    right: 6.0,
+                                    bottom: 6.0,
+                                    type: PBadgeType.gray,
+                                  ),
+                                  if (item.type == 12)
+                                    const PBadge(
+                                      text: '音频',
+                                      top: 6.0,
+                                      right: 6.0,
+                                      type: PBadgeType.gray,
+                                    )
+                                  else
+                                    PBadge(
+                                      text: item.ogv?.typeName,
+                                      top: 6.0,
+                                      right: 6.0,
+                                      bottom: null,
+                                      left: null,
+                                    ),
+                                  if (!isSort)
+                                    Positioned.fill(
+                                      child: selectMask(
+                                        colorScheme,
+                                        item.checked,
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
                           ),
-                        if (!isSort)
-                          Positioned.fill(
-                            child: selectMask(
-                              colorScheme,
-                              item.checked,
-                            ),
-                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        content(context, colorScheme, isOwner),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
-              content(context, colorScheme, isOwner),
-            ],
+            ),
           ),
         ),
       ),
@@ -156,6 +215,7 @@ class FavVideoCardH extends StatelessWidget {
   }
 
   Widget content(BuildContext context, ColorScheme colorScheme, bool isOwner) {
+    final item = widget.item;
     return Expanded(
       child: Stack(
         clipBehavior: Clip.none,
@@ -213,33 +273,16 @@ class FavVideoCardH extends StatelessWidget {
           if (isOwner)
             Positioned(
               right: 0,
-              bottom: -8,
+              bottom: -6,
               child: iconButton(
                 icon: const Icon(Icons.clear),
-                tooltip: '取消收藏',
                 iconColor: colorScheme.outline,
-                onPressed: () => showDialog(
+                onPressed: () => showConfirmDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('提示'),
-                    content: const Text('要取消收藏吗?'),
-                    actions: [
-                      TextButton(
-                        onPressed: Get.back,
-                        child: Text(
-                          '取消',
-                          style: TextStyle(color: colorScheme.outline),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Get.back();
-                          ctr!.onCancelFav(index!, item.id!, item.type!);
-                        },
-                        child: const Text('确定取消'),
-                      ),
-                    ],
-                  ),
+                  title: const Text('提示'),
+                  content: const Text('要取消收藏吗？'),
+                  onConfirm: () =>
+                      widget.ctr!.onCancelFav(widget.index!, item.id!, item.type!),
                 ),
               ),
             ),

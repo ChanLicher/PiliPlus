@@ -21,21 +21,21 @@ const Curve _veilFadeCurve = Interval(
   curve: Curves.easeInOut,
 );
 
-const Curve _openCurve = Cubic(0.22, 0.77, 0.08, 1.0);
+const Curve _openCurve = Cubic(0.20, 0.90, 0.15, 1.0);
 
-const Curve _openPortraitCurve = Cubic(0.28, 0.70, 0.12, 1.0);
+const Curve _openPortraitCurve = Cubic(0.22, 0.86, 0.16, 1.0);
 
 Curve _openCurveFor(bool horizontal) =>
     horizontal ? _openCurve : _openPortraitCurve;
 
-const Curve _closeCurve = Cubic(0.25, 0.65, 0.35, 1.0);
+const Curve _closeCurve = Cubic(0.22, 0.84, 0.18, 1.0);
 
-/// 入场进度到此值即认为页面已就位，播放页据此开始取流（0.5 ≈ 175ms）
-const double _entryContentReadyAt = 0.5;
+/// 入场进度到此值即认为页面已就位，播放页据此开始取流（0.45 ≈ 189ms）
+const double _entryContentReadyAt = 0.45;
 
-const Duration videoPageTransitionDuration = Duration(milliseconds: 350);
+const Duration videoPageTransitionDuration = Duration(milliseconds: 420);
 
-const Duration videoPageReverseTransitionDuration = Duration(milliseconds: 230);
+const Duration videoPageReverseTransitionDuration = Duration(milliseconds: 380);
 
 const double _paintEpsilon = 0.02;
 
@@ -420,8 +420,8 @@ class _BelowPageSinkState extends State<_BelowPageSink> {
         final t = value <= 0.001
             ? 0.0
             : (widget.animation.status == AnimationStatus.reverse
-                  ? Curves.easeInCubic.transform(value)
-                  : Curves.easeOutCubic.transform(value));
+                  ? 1 - _closeCurve.transform(1 - value)
+                  : _openCurve.transform(value));
         return Transform.scale(
           scale: widget.route.heroDisabled ? 1 : 1 - _belowPageSinkScale * t,
           child: _cappedSnapshot(context, _controller, child!),
@@ -636,11 +636,16 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
             final cardRadius = fallback
                 ? 0.0
                 : _cardRadius * (returning ? contraction : 1 - expansion);
-            final scrimAlpha = _scrimOpacity * expansion;
+            final scrimAlpha =
+                _scrimOpacity * (returning ? (1 - contraction) : expansion);
             final scrimVisible =
                 !fallback &&
                 animation.status != AnimationStatus.completed &&
                 scrimAlpha > _paintEpsilon;
+            // 返回收尾阶段（后 22%）平滑淡出页面纹理，无缝过渡到下方真实卡片，消除末帧硬切感
+            final pageOpacity = (!fallback && returning && contraction > 0.78)
+                ? (1 - (contraction - 0.78) / 0.22).clamp(0.0, 1.0)
+                : 1.0;
             final ticking =
                 !_freezePageWhileFlying ||
                 animation.status == AnimationStatus.completed;
@@ -677,17 +682,20 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
                 ),
                 Positioned.fill(
                   key: const ValueKey('video-transition-page-position'),
-                  child: ClipPath(
-                    key: const ValueKey('video-transition-page-container'),
-                    clipBehavior: Clip.antiAlias,
-                    clipper: _PageRectClipper(visualRect, cardRadius),
-                    // 快照按 1:1 栅格化，缩放只作用于纹理
-                    child: Transform(
-                      transform: pageTransform,
-                      child: _cappedSnapshot(
-                        context,
-                        _snapshotController,
-                        pageContentChild,
+                  child: Opacity(
+                    opacity: pageOpacity,
+                    child: ClipPath(
+                      key: const ValueKey('video-transition-page-container'),
+                      clipBehavior: Clip.antiAlias,
+                      clipper: _PageRectClipper(visualRect, cardRadius),
+                      // 快照按 1:1 栅格化，缩放只作用于纹理
+                      child: Transform(
+                        transform: pageTransform,
+                        child: _cappedSnapshot(
+                          context,
+                          _snapshotController,
+                          pageContentChild,
+                        ),
                       ),
                     ),
                   ),
