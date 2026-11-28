@@ -1,6 +1,9 @@
 import 'package:PiliPlus/common/widgets/avatars.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
+import 'package:PiliPlus/common/widgets/video_card/video_card_transition.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/http/search.dart';
+import 'package:PiliPlus/models_new/video/video_detail/dimension.dart';
 import 'package:PiliPlus/models/dynamics/result.dart';
 import 'package:PiliPlus/pages/dynamics/widgets/action_panel.dart';
 import 'package:PiliPlus/pages/dynamics/widgets/author_panel.dart';
@@ -11,7 +14,7 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:material_ui/material_ui.dart';
 
-class DynamicPanel extends StatelessWidget {
+class DynamicPanel extends StatefulWidget {
   final DynamicItemModel item;
   final bool isDetail;
   final ValueChanged<Object>? onRemove;
@@ -41,21 +44,95 @@ class DynamicPanel extends StatelessWidget {
   });
 
   @override
+  State<DynamicPanel> createState() => _DynamicPanelState();
+}
+
+class _DynamicPanelState extends State<DynamicPanel> {
+  final GlobalKey _cardKey = GlobalKey();
+  bool _pushing = false;
+
+  DynamicArchiveModel? get _avArchive => widget.item.type == 'DYNAMIC_TYPE_AV'
+      ? widget.item.modules.moduleDynamic?.major?.archive
+      : null;
+
+  bool get _canVideoHero =>
+      !widget.isSave &&
+      _avArchive != null &&
+      _avArchive!.bvid?.isNotEmpty == true;
+
+  String get _heroTag =>
+      'dyn_av_${identityHashCode(this)}_${_avArchive?.bvid ?? widget.item.idStr}';
+
+  @override
+  void dispose() {
+    if (_canVideoHero) {
+      clearPendingVideoCardTransition(_heroTag);
+    }
+    super.dispose();
+  }
+
+  Future<void> _onTapPanel(BuildContext context) async {
+    if (_canVideoHero) {
+      if (_pushing) return;
+      _pushing = true;
+      try {
+        final archive = _avArchive!;
+        final bvid = archive.bvid!;
+        final useHero = !isVideoPageTransitionActive(_heroTag);
+        if (useHero) {
+          prepareVideoCardTransition(_heroTag, _cardKey.currentContext ?? context);
+        }
+        int? cid;
+        Dimension? dimension;
+        if (await SearchHttp.ab2cWithDimension(bvid: bvid) case final res?) {
+          cid = res.cid;
+          dimension = res.dimension;
+        }
+        if (cid != null) {
+          PageUtils.toVideoPage(
+            bvid: bvid,
+            cid: cid,
+            cover: archive.cover,
+            title: archive.title,
+            dimension: dimension,
+            heroTag: useHero ? _heroTag : null,
+          );
+          return;
+        }
+      } finally {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _pushing = false;
+        });
+      }
+    }
+    PageUtils.pushDynDetail(widget.item);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
+    final isDetail = widget.isDetail;
+    final isSave = widget.isSave;
+    final isDetailPortraitW = widget.isDetailPortraitW;
     if (item.visible == false) {
       return const SizedBox.shrink();
     }
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const cardRadius = BorderRadius.all(Radius.circular(16));
+    final cardSurface = isDark
+        ? const Color(0xFF1A1B1F)
+        : const Color(0xFFFFFFFF);
     final authorWidget = AuthorPanel(
       item: item,
       isDetail: isDetail,
-      onRemove: onRemove,
+      onRemove: widget.onRemove,
       isSave: isSave,
-      onSetTop: onSetTop,
-      onBlock: onBlock,
-      onSetPubSetting: onSetPubSetting,
-      onEdit: onEdit,
-      onSetReplySubject: onSetReplySubject,
+      onSetTop: widget.onSetTop,
+      onBlock: widget.onBlock,
+      onSetPubSetting: widget.onSetPubSetting,
+      onEdit: widget.onEdit,
+      onSetReplySubject: widget.onSetReplySubject,
     );
 
     void showMore() => _imageSaveDialog(context, authorWidget.morePanel);
@@ -63,6 +140,7 @@ class DynamicPanel extends StatelessWidget {
     final child = Material(
       type: MaterialType.transparency,
       child: InkWell(
+        borderRadius: isSave ? null : cardRadius,
         onTap:
             isDetail &&
                 !const {
@@ -76,7 +154,7 @@ class DynamicPanel extends StatelessWidget {
                   'DYNAMIC_TYPE_COURSES_SEASON',
                 }.contains(item.type)
             ? null
-            : () => PageUtils.pushDynDetail(item),
+            : () => _onTapPanel(context),
         onLongPress: showMore,
         onSecondaryTap: PlatformUtils.isMobile ? null : showMore,
         child: Column(
@@ -122,20 +200,55 @@ class DynamicPanel extends StatelessWidget {
       ),
     );
     if (isSave || (isDetail && !isDetailPortraitW)) {
+      if (_canVideoHero) {
+        return VideoCardHero(
+          key: _cardKey,
+          tag: _heroTag,
+          surfaceColor: cardSurface,
+          cornerRadius: 16,
+          child: child,
+        );
+      }
       return child;
     }
-    return DecoratedBox(
+    Widget card = DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            width: 8,
-            color: theme.dividerColor.withValues(alpha: 0.05),
-          ),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.055)
+            : Colors.white.withValues(alpha: 0.86),
+        borderRadius: cardRadius,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.95),
+          width: 0.85,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.045),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+      child: ClipRRect(
+        borderRadius: cardRadius,
         child: child,
+      ),
+    );
+    if (_canVideoHero) {
+      card = VideoCardHero(
+        key: _cardKey,
+        tag: _heroTag,
+        surfaceColor: cardSurface,
+        cornerRadius: 16,
+        child: card,
+      );
+    }
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+        child: card,
       ),
     );
   }
@@ -147,6 +260,7 @@ class DynamicPanel extends StatelessWidget {
     String? title;
     String? cover;
     String? bvid;
+    final item = widget.item;
     late final major = item.modules.moduleDynamic?.major;
     switch (item.type) {
       case 'DYNAMIC_TYPE_AV':
@@ -244,7 +358,7 @@ class DynamicPanel extends StatelessWidget {
       );
     }
     return InkWell(
-      onTap: onUnfold,
+      onTap: widget.onUnfold,
       child: Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 10),
