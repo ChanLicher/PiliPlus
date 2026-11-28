@@ -34,6 +34,64 @@ class VideoCardHLater extends StatefulWidget {
 
 class _VideoCardHLaterState extends State<VideoCardHLater> {
   bool _hovered = false;
+  final GlobalKey _cardKey = GlobalKey();
+  bool _pushing = false;
+
+  bool get _isNormalVideo =>
+      !(widget.videoItem.isPugv ?? false) && !(widget.videoItem.isPgc ?? false);
+
+  String get _heroTag =>
+      'later_h_${identityHashCode(this)}_${widget.videoItem.bvid ?? widget.videoItem.aid}';
+
+  @override
+  void dispose() {
+    clearPendingVideoCardTransition(_heroTag);
+    super.dispose();
+  }
+
+  Future<void> _onTapLater(BuildContext context) async {
+    final videoItem = widget.videoItem;
+    if (_isNormalVideo && widget.ctr is LaterController) {
+      if (_pushing) return;
+      _pushing = true;
+      try {
+        final useHero = !isVideoPageTransitionActive(_heroTag);
+        if (useHero) {
+          prepareVideoCardTransition(
+            _heroTag,
+            _cardKey.currentContext ?? context,
+          );
+        }
+        final cid =
+            videoItem.cid ??
+            await SearchHttp.ab2c(
+              aid: videoItem.aid,
+              bvid: videoItem.bvid,
+            );
+        if (cid != null) {
+          (widget.ctr as LaterController).openVideoWithHero(
+            videoItem,
+            cid,
+            widget.index,
+            heroTag: useHero ? _heroTag : null,
+          );
+        }
+      } catch (err) {
+        SmartDialog.showToast(err.toString());
+      } finally {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _pushing = false;
+        });
+      }
+      return;
+    }
+    await onPushLater(
+      videoItem,
+      onViewLater: widget.onViewLater,
+      heroTag: _isNormalVideo ? _heroTag : null,
+      context: _isNormalVideo ? (_cardKey.currentContext ?? context) : null,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +101,9 @@ class _VideoCardHLaterState extends State<VideoCardHLater> {
     final isDark = theme.brightness == Brightness.dark;
     final enableMultiSelect = ctr.enableMultiSelect.value;
     const radius = BorderRadius.all(Radius.circular(14));
+    final cardSurface = isDark
+        ? const Color(0xFF1A1B1F)
+        : const Color(0xFFFFFFFF);
 
     final onLongPress = enableMultiSelect
         ? null
@@ -50,58 +111,40 @@ class _VideoCardHLaterState extends State<VideoCardHLater> {
             ..enableMultiSelect.value = true
             ..onSelect(videoItem);
 
-    return RepaintBoundary(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Style.safeSpace,
-          vertical: 4,
+    Widget card = DecoratedBox(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: _hovered ? 0.085 : 0.055)
+            : Colors.white.withValues(alpha: _hovered ? 0.93 : 0.85),
+        borderRadius: radius,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: _hovered ? 0.17 : 0.10)
+              : Colors.white.withValues(alpha: 0.95),
+          width: 0.85,
         ),
-        child: MouseRegion(
-          onHover: (e) {
-            if (e.kind == PointerDeviceKind.mouse && !_hovered) {
-              setState(() => _hovered = true);
-            }
-          },
-          onExit: (_) {
-            if (_hovered) setState(() => _hovered = false);
-          },
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: _hovered ? 0.085 : 0.055)
-                  : Colors.white.withValues(alpha: _hovered ? 0.93 : 0.85),
-              borderRadius: radius,
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: _hovered ? 0.17 : 0.10)
-                    : Colors.white.withValues(alpha: 0.95),
-                width: 0.85,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: isDark
-                        ? (_hovered ? 0.28 : 0.18)
-                        : (_hovered ? 0.08 : 0.04),
-                  ),
-                  blurRadius: _hovered ? 14 : 9,
-                  offset: Offset(0, _hovered ? 5 : 2),
-                ),
-              ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: isDark
+                  ? (_hovered ? 0.28 : 0.18)
+                  : (_hovered ? 0.08 : 0.04),
             ),
-            child: ClipRRect(
-              borderRadius: radius,
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  onLongPress: onLongPress,
-                  onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-                  onTap: enableMultiSelect
-                      ? () => ctr.onSelect(videoItem)
-                      : () => onPushLater(
-                          videoItem,
-                          onViewLater: widget.onViewLater,
-                        ),
+            blurRadius: _hovered ? 14 : 9,
+            offset: Offset(0, _hovered ? 5 : 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onLongPress: onLongPress,
+            onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+            onTap: enableMultiSelect
+                ? () => ctr.onSelect(videoItem)
+                : () => _onTapLater(context),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: Row(
@@ -145,7 +188,34 @@ class _VideoCardHLaterState extends State<VideoCardHLater> {
                 ),
               ),
             ),
-          ),
+          );
+
+    if (_isNormalVideo && !enableMultiSelect) {
+      card = VideoCardHero(
+        key: _cardKey,
+        tag: _heroTag,
+        surfaceColor: cardSurface,
+        cornerRadius: 14,
+        child: card,
+      );
+    }
+
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: 4,
+        ),
+        child: MouseRegion(
+          onHover: (e) {
+            if (e.kind == PointerDeviceKind.mouse && !_hovered) {
+              setState(() => _hovered = true);
+            }
+          },
+          onExit: (_) {
+            if (_hovered) setState(() => _hovered = false);
+          },
+          child: card,
         ),
       ),
     );

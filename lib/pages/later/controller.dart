@@ -137,6 +137,32 @@ class LaterController extends MultiSelectController<LaterData, LaterItemModel>
     );
   }
 
+  void openVideoWithHero(
+    LaterItemModel item,
+    int cid,
+    int index, {
+    String? heroTag,
+  }) {
+    PageUtils.toVideoPage(
+      bvid: item.bvid,
+      cid: cid,
+      cover: item.pic,
+      title: item.title,
+      dimension: item.dimension,
+      heroTag: heroTag,
+      extraArguments: baseCtr.isPlayAll.value
+          ? {
+              'sourceType': SourceType.watchLater,
+              'count': baseCtr.counts[LaterViewType.all.index],
+              'favTitle': '稍后再看',
+              'mediaId': mid,
+              'desc': asc.value,
+              'isContinuePlaying': index != 0,
+            }
+          : const {'viewLater': true},
+    );
+  }
+
   // 稍后再看播放全部
   void toViewPlayAll() {
     if (loadingState.value case Success(:final response)) {

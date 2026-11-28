@@ -353,7 +353,11 @@ class VideoPageTransitionRoute<T> extends GetPageRoute<T> {
       animation: anim,
       child: barrier,
       builder: (context, child) => IgnorePointer(
-        ignoring: anim.status == AnimationStatus.reverse || anim.value < 0.05,
+        ignoring:
+            anim.status == AnimationStatus.reverse ||
+            anim.status == AnimationStatus.dismissed ||
+            !isCurrent ||
+            anim.value < 0.05,
         child: child,
       ),
     );
@@ -452,7 +456,7 @@ class _BelowPageSinkState extends State<_BelowPageSink> {
   void _onAnimationValue() {
     if (_snapshotOn &&
         widget.animation.status == AnimationStatus.reverse &&
-        widget.animation.value <= 0.35) {
+        widget.animation.value <= 0.70) {
       _syncSnapshotting();
     }
   }
@@ -462,7 +466,7 @@ class _BelowPageSinkState extends State<_BelowPageSink> {
   void _syncSnapshotting() {
     final releaseForLiveScroll =
         widget.animation.status == AnimationStatus.reverse &&
-        widget.animation.value <= 0.35;
+        widget.animation.value <= 0.70;
     final want =
         widget.allowSnapshotting &&
         !releaseForLiveScroll &&
@@ -627,7 +631,7 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
   void _handleAnimationStatus(AnimationStatus status) {
     // 只在飞行期间开快照；落地后恢复实时绘制（这时页面才需要被重绘）
     _setSnapshotting(_snapshotVideoPage && status.isAnimating);
-    if (status == AnimationStatus.completed && _route?.offstage == false) {
+    if (status == AnimationStatus.completed) {
       _entryCompleted = true;
     }
   }
@@ -770,7 +774,10 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
                 Positioned.fill(
                   key: const ValueKey('video-transition-page-position'),
                   child: IgnorePointer(
-                    ignoring: returning,
+                    ignoring:
+                        returning ||
+                        animation.status == AnimationStatus.reverse ||
+                        (_route?.popGestureInProgress ?? false),
                     child: Opacity(
                       opacity: pageOpacity,
                     child: ClipPath(

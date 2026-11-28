@@ -7,6 +7,8 @@ import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
 import 'package:PiliPlus/common/widgets/stat/stat.dart';
 import 'package:PiliPlus/common/widgets/video_card/video_card_h.dart'
     show pushVideoH;
+import 'package:PiliPlus/common/widgets/video_card/video_card_transition.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:PiliPlus/models/search/result.dart';
 import 'package:PiliPlus/utils/bili_utils.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
@@ -195,9 +197,31 @@ class _SearchUserVideoItem extends StatefulWidget {
 
 class _SearchUserVideoItemState extends State<_SearchUserVideoItem> {
   final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
+  final GlobalKey _cardKey = GlobalKey();
+  bool _pushing = false;
+
+  String get _heroTag =>
+      'search_user_av_${identityHashCode(this)}_${widget.video.bvid ?? widget.video.aid}';
+
+  Future<void> _onTapVideo(BuildContext context) async {
+    if (_pushing) return;
+    _pushing = true;
+    try {
+      await pushVideoH(
+        widget.video,
+        heroTag: _heroTag,
+        context: _cardKey.currentContext ?? context,
+      );
+    } finally {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _pushing = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
+    clearPendingVideoCardTransition(_heroTag);
     _hovered.dispose();
     super.dispose();
   }
@@ -212,12 +236,22 @@ class _SearchUserVideoItemState extends State<_SearchUserVideoItem> {
   @override
   Widget build(BuildContext context) {
     final video = widget.video;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardSurface = isDark
+        ? const Color(0xFF1A1B1F)
+        : const Color(0xFFFFFFFF);
     return Padding(
       padding: widget.padding,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) => _hovered.value = true,
-        onExit: (_) => _hovered.value = false,
+        onHover: (e) {
+          if (e.kind == PointerDeviceKind.mouse && !_hovered.value) {
+            _hovered.value = true;
+          }
+        },
+        onExit: (_) {
+          if (_hovered.value) _hovered.value = false;
+        },
         child: ValueListenableBuilder<bool>(
           valueListenable: _hovered,
           builder: (context, hovered, child) {
@@ -228,9 +262,14 @@ class _SearchUserVideoItemState extends State<_SearchUserVideoItem> {
               child: child,
             );
           },
-          child: GestureDetector(
-            behavior: .opaque,
-            onTap: () => pushVideoH(video),
+          child: VideoCardHero(
+            key: _cardKey,
+            tag: _heroTag,
+            surfaceColor: cardSurface,
+            cornerRadius: 10,
+            child: GestureDetector(
+              behavior: .opaque,
+              onTap: () => _onTapVideo(context),
             onLongPress: PlatformUtils.isMobile
                 ? () {
                     Platform.isIOS
@@ -307,6 +346,7 @@ class _SearchUserVideoItemState extends State<_SearchUserVideoItem> {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),
