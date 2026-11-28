@@ -75,12 +75,12 @@ final Curve _openPortraitCurve = _AppleSpringCurve(
 Curve _openCurveFor(bool horizontal) =>
     horizontal ? _openCurve : _openPortraitCurve;
 
-/// 退场弹簧（非对称设计）：刚度更高（response=0.34s）+ 严格临界阻尼（1.0，零回弹），
-/// 脱手利落、末段平滑磁吸回卡片原位。
+/// 退场弹簧（非对称设计）：刚度更高（response=0.32s）+ 严格临界阻尼（1.0，零回弹），
+/// 脱手利落、末段平滑磁吸回卡片原位且避免拖尾阻断交互。
 final Curve _closeCurve = _AppleSpringCurve(
-  response: 0.34,
+  response: 0.32,
   dampingRatio: 1.0,
-  durationSeconds: 0.44,
+  durationSeconds: 0.36,
 );
 
 /// 入场进度到此值即认为页面已就位，播放页据此开始取流（0.38 ≈ 182ms）
@@ -88,7 +88,7 @@ const double _entryContentReadyAt = 0.38;
 
 const Duration videoPageTransitionDuration = Duration(milliseconds: 480);
 
-const Duration videoPageReverseTransitionDuration = Duration(milliseconds: 440);
+const Duration videoPageReverseTransitionDuration = Duration(milliseconds: 360);
 
 const double _paintEpsilon = 0.02;
 
@@ -345,6 +345,21 @@ class VideoPageTransitionRoute<T> extends GetPageRoute<T> {
   }
 
   @override
+  Widget buildModalBarrier() {
+    final anim = animation;
+    final barrier = super.buildModalBarrier();
+    if (anim == null) return barrier;
+    return AnimatedBuilder(
+      animation: anim,
+      child: barrier,
+      builder: (context, child) => IgnorePointer(
+        ignoring: anim.status == AnimationStatus.reverse || anim.value < 0.05,
+        child: child,
+      ),
+    );
+  }
+
+  @override
   Widget buildTransitions(
     BuildContext context,
     Animation<double> animation,
@@ -417,6 +432,7 @@ class _BelowPageSinkState extends State<_BelowPageSink> {
     // 后立即释放整屏快照（更省 GPU 显存）。
     _syncSnapshotting();
     widget.animation.addStatusListener(_onAnimationStatus);
+    widget.animation.addListener(_onAnimationValue);
   }
 
   @override
@@ -424,17 +440,32 @@ class _BelowPageSinkState extends State<_BelowPageSink> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.animation != widget.animation) {
       oldWidget.animation.removeStatusListener(_onAnimationStatus);
+      oldWidget.animation.removeListener(_onAnimationValue);
       widget.animation.addStatusListener(_onAnimationStatus);
+      widget.animation.addListener(_onAnimationValue);
     }
     _syncSnapshotting();
   }
 
   void _onAnimationStatus(AnimationStatus status) => _syncSnapshotting();
 
+  void _onAnimationValue() {
+    if (_snapshotOn &&
+        widget.animation.status == AnimationStatus.reverse &&
+        widget.animation.value <= 0.35) {
+      _syncSnapshotting();
+    }
+  }
+
   /// 依据当前策略决定是否持有快照名额；名额不足时退化为实时绘制。
+  /// 退场后半段（value <= 0.35）提前解除静态快照，保证用户立即滚动瀑布流时画面实时响应不卡顿。
   void _syncSnapshotting() {
+    final releaseForLiveScroll =
+        widget.animation.status == AnimationStatus.reverse &&
+        widget.animation.value <= 0.35;
     final want =
         widget.allowSnapshotting &&
+        !releaseForLiveScroll &&
         (!_snapshotOnlyWhileAnimating || widget.animation.isAnimating);
     if (want == _snapshotOn) {
       _controller.allowSnapshotting = _slotHeld && want;
@@ -456,6 +487,7 @@ class _BelowPageSinkState extends State<_BelowPageSink> {
   @override
   void dispose() {
     widget.animation.removeStatusListener(_onAnimationStatus);
+    widget.animation.removeListener(_onAnimationValue);
     if (_slotHeld) _releaseSnapshotSlot();
     _controller.dispose();
     super.dispose();
@@ -737,8 +769,10 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
                 ),
                 Positioned.fill(
                   key: const ValueKey('video-transition-page-position'),
-                  child: Opacity(
-                    opacity: pageOpacity,
+                  child: IgnorePointer(
+                    ignoring: returning,
+                    child: Opacity(
+                      opacity: pageOpacity,
                     child: ClipPath(
                       key: const ValueKey('video-transition-page-container'),
                       clipBehavior: Clip.antiAlias,
@@ -754,6 +788,7 @@ class _VideoPageHeroTargetState extends State<VideoPageHeroTarget> {
                       ),
                     ),
                   ),
+                ),
                 ),
                 Positioned.fill(
                   key: const ValueKey('video-transition-hero-position'),
