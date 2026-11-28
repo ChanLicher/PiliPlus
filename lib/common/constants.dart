@@ -1,6 +1,11 @@
 abstract final class Constants {
   static const appName = 'PiliPlus';
-  static const sourceCodeUrl = 'https://github.com/dev4harmony/PiliPlus';
+  static const sourceCodeUrl = 'https://github.com/ChanLicher/PiliPlus';
+  static const upstreamSourceCodeUrl = 'https://github.com/dev4harmony/PiliPlus';
+  static const latestReleaseApi =
+      'https://api.github.com/repos/ChanLicher/PiliPlus/releases';
+  static const tagRefApiPrefix =
+      'https://api.github.com/repos/ChanLicher/PiliPlus/git/refs/tags/';
 
   // 27eb53fc9058f8c3  移动端 Android
   // 4409e2ce8ffd12b8  HD版

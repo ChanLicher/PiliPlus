@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:ui' show ImageFilter;
 
 import 'package:PiliPlus/build_config.dart';
 import 'package:PiliPlus/common/constants.dart';
@@ -26,12 +27,13 @@ abstract final class Update {
     }
     SmartDialog.dismiss();
     try {
+      final reqOptions = Options(
+        headers: {'user-agent': BrowserUa.mob},
+        extra: {'account': const NoAccount()},
+      );
       final res = await Request().get(
-        Api.latestApp,
-        options: Options(
-          headers: {'user-agent': BrowserUa.mob},
-          extra: {'account': const NoAccount()},
-        ),
+        Constants.latestReleaseApi,
+        options: reqOptions,
       );
       if (res.data is Map || res.data.isEmpty) {
         if (!isAuto) {
@@ -43,11 +45,18 @@ abstract final class Update {
       final int latest =
           DateTime.parse(data['created_at']).millisecondsSinceEpoch ~/ 1000;
       final latestTag = data['tag_name'];
-      final latestHash = (await Request().get(
-        'https://api.github.com/repos/dev4harmony/PiliPlus/git/refs/tags/$latestTag',
-      )).data['object']['sha'];
+      String? latestHash;
+      try {
+        final refRes = await Request().get(
+          '${Constants.tagRefApiPrefix}$latestTag',
+          options: reqOptions,
+        );
+        if (refRes.data is Map) {
+          latestHash = refRes.data['object']?['sha']?.toString();
+        }
+      } catch (_) {}
       if (BuildConfig.buildTime >= latest ||
-          BuildConfig.commitHash == latestHash) {
+          (latestHash != null && BuildConfig.commitHash == latestHash)) {
         if (!isAuto) {
           SmartDialog.showToast('已是最新版本');
         }
@@ -55,67 +64,184 @@ abstract final class Update {
         SmartDialog.show(
           animationType: SmartAnimationType.centerFade_otherSlide,
           builder: (context) {
-            final colorScheme = ColorScheme.of(context);
-            Widget downloadBtn(String text, {String? ext}) => TextButton(
-              onPressed: () => onDownload(data, ext: ext),
-              child: Text(text),
+            final theme = Theme.of(context);
+            final colorScheme = theme.colorScheme;
+            final isDark = theme.brightness == Brightness.dark;
+            const radius = BorderRadius.all(Radius.circular(22));
+            final subtleBtnStyle = TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              backgroundColor: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.04),
             );
-            return AlertDialog(
-              title: const Text('🎉 发现新版本 '),
-              content: SizedBox(
-                height: 280,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${data['tag_name']}',
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('${data['body']}'),
-                      TextButton(
-                        onPressed: () => PageUtils.launchURL(
-                          '${Constants.sourceCodeUrl}/commits/ohos', // 鸿蒙版ohos分支
+            final primaryBtnStyle = TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              backgroundColor: colorScheme.primary.withValues(
+                alpha: isDark ? 0.22 : 0.12,
+              ),
+            );
+            Widget downloadBtn(String text, {String? ext}) => TextButton(
+              style: primaryBtnStyle,
+              onPressed: () => onDownload(data, ext: ext),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 24,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.42 : 0.14,
                         ),
-                        child: Text(
-                          "点此查看完整更新(即commit)内容",
-                          style: TextStyle(color: colorScheme.primary),
-                        ),
+                        blurRadius: 28,
+                        offset: const Offset(0, 12),
                       ),
                     ],
                   ),
-                ),
-              ),
-              actions: [
-                if (isAuto)
-                  TextButton(
-                    onPressed: () {
-                      SmartDialog.dismiss();
-                      GStorage.setting.put(SettingBoxKey.autoUpdate, false);
-                    },
-                    child: Text(
-                      '不再提醒',
-                      style: TextStyle(color: colorScheme.outline),
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xCC1E1F24)
+                              : Colors.white.withValues(alpha: 0.88),
+                          borderRadius: radius,
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.14)
+                                : Colors.white.withValues(alpha: 0.95),
+                            width: 0.9,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '🎉 发现新版本',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 260,
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${data['tag_name']}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text('${data['body']}'),
+                                      const SizedBox(height: 6),
+                                      TextButton(
+                                        style: TextButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
+                                          shape: const RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.all(
+                                              Radius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                        onPressed: () => PageUtils.launchURL(
+                                          '${Constants.sourceCodeUrl}/commits/ohos', // 鸿蒙版ohos分支
+                                        ),
+                                        child: Text(
+                                          "点此查看完整更新(即commit)内容",
+                                          style: TextStyle(
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                spacing: 8,
+                                children: [
+                                  if (isAuto)
+                                    TextButton(
+                                      style: subtleBtnStyle,
+                                      onPressed: () {
+                                        SmartDialog.dismiss();
+                                        GStorage.setting.put(
+                                          SettingBoxKey.autoUpdate,
+                                          false,
+                                        );
+                                      },
+                                      child: Text(
+                                        '不再提醒',
+                                        style: TextStyle(
+                                          color: colorScheme.outline,
+                                        ),
+                                      ),
+                                    ),
+                                  TextButton(
+                                    style: subtleBtnStyle,
+                                    onPressed: SmartDialog.dismiss,
+                                    child: Text(
+                                      '取消',
+                                      style: TextStyle(
+                                        color: colorScheme.outline,
+                                      ),
+                                    ),
+                                  ),
+                                  if (Platform.isWindows) ...[
+                                    downloadBtn('zip', ext: 'zip'),
+                                    downloadBtn('exe', ext: 'exe'),
+                                  ] else if (Platform.isLinux) ...[
+                                    downloadBtn('rpm', ext: 'rpm'),
+                                    downloadBtn('deb', ext: 'deb'),
+                                    downloadBtn('targz', ext: 'tar.gz'),
+                                  ] else
+                                    downloadBtn('Github'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                TextButton(
-                  onPressed: SmartDialog.dismiss,
-                  child: Text(
-                    '取消',
-                    style: TextStyle(color: colorScheme.outline),
-                  ),
                 ),
-                if (Platform.isWindows) ...[
-                  downloadBtn('zip', ext: 'zip'),
-                  downloadBtn('exe', ext: 'exe'),
-                ] else if (Platform.isLinux) ...[
-                  downloadBtn('rpm', ext: 'rpm'),
-                  downloadBtn('deb', ext: 'deb'),
-                  downloadBtn('targz', ext: 'tar.gz'),
-                ] else
-                  downloadBtn('Github'),
-              ],
+              ),
             );
           },
         );
