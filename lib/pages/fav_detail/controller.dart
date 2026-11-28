@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
+import 'package:PiliPlus/common/widgets/video_card/video_card_transition.dart';
 import 'package:PiliPlus/http/fav.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/fav_order_type.dart';
@@ -19,7 +20,7 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:flutter/widgets.dart' show Text, ValueChanged;
+import 'package:flutter/widgets.dart' show BuildContext, Text, ValueChanged;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
@@ -33,6 +34,13 @@ mixin BaseFavController
   ValueChanged<int>? updateCount;
 
   void onViewFav(FavDetailItemModel item, int? index);
+
+  void onViewFavWithHero(
+    FavDetailItemModel item,
+    int? index, {
+    String? heroTag,
+    BuildContext? context,
+  }) => onViewFav(item, index);
 
   Future<void> onCancelFav(int index, int id, int type) async {
     final res = await FavHttp.favVideo(
@@ -230,6 +238,23 @@ class FavDetailController
 
   @override
   void onViewFav(FavDetailItemModel item, int? index) {
+    onViewFavWithHero(item, index);
+  }
+
+  @override
+  void onViewFavWithHero(
+    FavDetailItemModel item,
+    int? index, {
+    String? heroTag,
+    BuildContext? context,
+  }) {
+    final useHero =
+        heroTag != null &&
+        context != null &&
+        !isVideoPageTransitionActive(heroTag);
+    if (useHero) {
+      prepareVideoCardTransition(heroTag, context);
+    }
     final folder = folderInfo.value;
     // TODO: dimension
     PageUtils.toVideoPage(
@@ -237,6 +262,7 @@ class FavDetailController
       cid: item.ugc!.firstCid!,
       cover: item.cover,
       title: item.title,
+      heroTag: useHero ? heroTag : null,
       extraArguments: isPlayAll.value
           ? {
               'sourceType': SourceType.fav,

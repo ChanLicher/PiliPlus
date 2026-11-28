@@ -3,17 +3,19 @@ import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/select_mask.dart';
 import 'package:PiliPlus/common/widgets/stat/stat.dart';
+import 'package:PiliPlus/common/widgets/video_card/video_card_transition.dart';
 import 'package:PiliPlus/http/search.dart';
 import 'package:PiliPlus/models/common/stat_type.dart';
 import 'package:PiliPlus/models_new/later/list.dart';
 import 'package:PiliPlus/pages/later/controller.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:material_ui/material_ui.dart';
 
 // 视频卡片 - 水平布局
-class VideoCardHLater extends StatelessWidget {
+class VideoCardHLater extends StatefulWidget {
   const VideoCardHLater({
     super.key,
     required this.ctr,
@@ -27,9 +29,20 @@ class VideoCardHLater extends StatelessWidget {
   final ValueChanged<int> onViewLater;
 
   @override
+  State<VideoCardHLater> createState() => _VideoCardHLaterState();
+}
+
+class _VideoCardHLaterState extends State<VideoCardHLater> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final ctr = widget.ctr;
+    final videoItem = widget.videoItem;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final enableMultiSelect = ctr.enableMultiSelect.value;
+    const radius = BorderRadius.all(Radius.circular(14));
 
     final onLongPress = enableMultiSelect
         ? null
@@ -37,53 +50,101 @@ class VideoCardHLater extends StatelessWidget {
             ..enableMultiSelect.value = true
             ..onSelect(videoItem);
 
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onLongPress: onLongPress,
-        onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-        onTap: enableMultiSelect
-            ? () => ctr.onSelect(videoItem)
-            : () => onPushLater(videoItem, onViewLater: onViewLater),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.safeSpace,
-            vertical: 5,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              AspectRatio(
-                aspectRatio: Style.aspectRatio,
-                child: LayoutBuilder(
-                  builder: (context, boxConstraints) {
-                    final double maxWidth = boxConstraints.maxWidth;
-                    final double maxHeight = boxConstraints.maxHeight;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        NetworkImgLayer(
-                          src: videoItem.pic,
-                          width: maxWidth,
-                          height: maxHeight,
-                          cacheWidth: videoItem.dimension?.cacheWidth,
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: 4,
+        ),
+        child: MouseRegion(
+          onHover: (e) {
+            if (e.kind == PointerDeviceKind.mouse && !_hovered) {
+              setState(() => _hovered = true);
+            }
+          },
+          onExit: (_) {
+            if (_hovered) setState(() => _hovered = false);
+          },
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: _hovered ? 0.085 : 0.055)
+                  : Colors.white.withValues(alpha: _hovered ? 0.93 : 0.85),
+              borderRadius: radius,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: _hovered ? 0.17 : 0.10)
+                    : Colors.white.withValues(alpha: 0.95),
+                width: 0.85,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(
+                    alpha: isDark
+                        ? (_hovered ? 0.28 : 0.18)
+                        : (_hovered ? 0.08 : 0.04),
+                  ),
+                  blurRadius: _hovered ? 14 : 9,
+                  offset: Offset(0, _hovered ? 5 : 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: radius,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onLongPress: onLongPress,
+                  onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+                  onTap: enableMultiSelect
+                      ? () => ctr.onSelect(videoItem)
+                      : () => onPushLater(
+                          videoItem,
+                          onViewLater: widget.onViewLater,
                         ),
-                        ?videoItem.label,
-                        ...videoItem.progressIndicator(theme.colorScheme),
-                        Positioned.fill(
-                          child: selectMask(
-                            theme.colorScheme,
-                            videoItem.checked,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        AspectRatio(
+                          aspectRatio: Style.aspectRatio,
+                          child: LayoutBuilder(
+                            builder: (context, boxConstraints) {
+                              final double maxWidth = boxConstraints.maxWidth;
+                              final double maxHeight = boxConstraints.maxHeight;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  NetworkImgLayer(
+                                    src: videoItem.pic,
+                                    width: maxWidth,
+                                    height: maxHeight,
+                                    cacheWidth: videoItem.dimension?.cacheWidth,
+                                  ),
+                                  ?videoItem.label,
+                                  ...videoItem.progressIndicator(
+                                    theme.colorScheme,
+                                  ),
+                                  Positioned.fill(
+                                    child: selectMask(
+                                      theme.colorScheme,
+                                      videoItem.checked,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
+                        const SizedBox(width: 10),
+                        content(context, theme),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
-              content(context, theme),
-            ],
+            ),
           ),
         ),
       ),
@@ -91,6 +152,7 @@ class VideoCardHLater extends StatelessWidget {
   }
 
   Widget content(BuildContext context, ThemeData theme) {
+    final videoItem = widget.videoItem;
     final isPgc = videoItem.isPgc == true && videoItem.bangumi != null;
     Widget stat = StatWidget(
       type: StatType.play,
@@ -166,10 +228,10 @@ class VideoCardHLater extends StatelessWidget {
           ),
           Positioned(
             right: 0,
-            bottom: -8,
+            bottom: -6,
             child: iconButton(
-              tooltip: '移除',
-              onPressed: () => ctr.toViewDel(context, index, videoItem.aid!),
+              onPressed: () =>
+                  widget.ctr.toViewDel(context, widget.index, videoItem.aid!),
               icon: const Icon(Icons.clear),
               iconColor: theme.colorScheme.outline,
             ),
@@ -183,6 +245,8 @@ class VideoCardHLater extends StatelessWidget {
 Future<void> onPushLater(
   LaterItemModel item, {
   ValueChanged<int>? onViewLater,
+  String? heroTag,
+  BuildContext? context,
 }) async {
   if (item.isPugv ?? false) {
     PageUtils.viewPugv(seasonId: item.aid);
@@ -195,6 +259,14 @@ Future<void> onPushLater(
       PageUtils.viewPgcFromUri(item.redirectUrl!, viewLater: true);
     }
     return;
+  }
+  final useHero =
+      onViewLater == null &&
+      heroTag != null &&
+      context != null &&
+      !isVideoPageTransitionActive(heroTag);
+  if (useHero) {
+    prepareVideoCardTransition(heroTag, context);
   }
   try {
     final cid =
@@ -213,6 +285,7 @@ Future<void> onPushLater(
           cover: item.pic,
           title: item.title,
           dimension: item.dimension,
+          heroTag: useHero ? heroTag : null,
           extraArguments: const {'viewLater': true},
         );
       }

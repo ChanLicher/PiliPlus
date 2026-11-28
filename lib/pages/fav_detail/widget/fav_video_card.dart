@@ -6,6 +6,7 @@ import 'package:PiliPlus/common/widgets/image/image_save.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/select_mask.dart';
 import 'package:PiliPlus/common/widgets/stat/stat.dart';
+import 'package:PiliPlus/common/widgets/video_card/video_card_transition.dart';
 import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
     show PlaylistSource;
 import 'package:PiliPlus/models/common/badge_type.dart';
@@ -40,10 +41,26 @@ class FavVideoCardH extends StatefulWidget {
 
 class _FavVideoCardHState extends State<FavVideoCardH> {
   bool _hovered = false;
+  final GlobalKey _cardKey = GlobalKey();
 
   bool get isSort => widget.ctr == null;
 
-  void _onTap() {
+  bool get _isNormalVideo =>
+      !isSort &&
+      !const [1, 9].contains(widget.item.attr) &&
+      widget.item.type != 12 &&
+      widget.item.type != 24;
+
+  String get _heroTag =>
+      'fav_video_${identityHashCode(this)}_${widget.item.bvid ?? widget.item.id}';
+
+  @override
+  void dispose() {
+    clearPendingVideoCardTransition(_heroTag);
+    super.dispose();
+  }
+
+  void _onTap(BuildContext context) {
     final item = widget.item;
     // 0/4/16/...: 正常；9: up自己删除；1: 其他原因删除
     if (const [1, 9].contains(item.attr)) {
@@ -66,7 +83,12 @@ class _FavVideoCardHState extends State<FavVideoCardH> {
         );
         break;
       default:
-        widget.ctr!.onViewFav(item, widget.index);
+        widget.ctr!.onViewFavWithHero(
+          item,
+          widget.index,
+          heroTag: _heroTag,
+          context: _cardKey.currentContext ?? context,
+        );
         break;
     }
   }
@@ -80,6 +102,9 @@ class _FavVideoCardHState extends State<FavVideoCardH> {
     final colorScheme = ColorScheme.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const radius = BorderRadius.all(Radius.circular(14));
+    final cardSurface = isDark
+        ? const Color(0xFF1A1B1F)
+        : const Color(0xFFFFFFFF);
 
     final onLongPress = isSort || enableMultiSelect
         ? null
@@ -110,102 +135,140 @@ class _FavVideoCardHState extends State<FavVideoCardH> {
           onExit: (_) {
             if (_hovered) setState(() => _hovered = false);
           },
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: _hovered ? 0.085 : 0.055)
-                  : Colors.white.withValues(alpha: _hovered ? 0.93 : 0.85),
-              borderRadius: radius,
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: _hovered ? 0.17 : 0.10)
-                    : Colors.white.withValues(alpha: 0.95),
-                width: 0.85,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: isDark
-                        ? (_hovered ? 0.28 : 0.18)
-                        : (_hovered ? 0.08 : 0.04),
+          child: (_isNormalVideo && !enableMultiSelect)
+              ? VideoCardHero(
+                  key: _cardKey,
+                  tag: _heroTag,
+                  surfaceColor: cardSurface,
+                  cornerRadius: 14,
+                  child: _buildCardBody(
+                    context,
+                    colorScheme,
+                    isDark,
+                    radius,
+                    isOwner,
+                    enableMultiSelect,
+                    onLongPress,
                   ),
-                  blurRadius: _hovered ? 14 : 9,
-                  offset: Offset(0, _hovered ? 5 : 2),
+                )
+              : _buildCardBody(
+                  context,
+                  colorScheme,
+                  isDark,
+                  radius,
+                  isOwner,
+                  enableMultiSelect,
+                  onLongPress,
                 ),
-              ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardBody(
+    BuildContext context,
+    ColorScheme colorScheme,
+    bool isDark,
+    BorderRadius radius,
+    bool isOwner,
+    bool enableMultiSelect,
+    VoidCallback? onLongPress,
+  ) {
+    final item = widget.item;
+    final ctr = widget.ctr;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: _hovered ? 0.085 : 0.055)
+            : Colors.white.withValues(alpha: _hovered ? 0.93 : 0.85),
+        borderRadius: radius,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: _hovered ? 0.17 : 0.10)
+              : Colors.white.withValues(alpha: 0.95),
+          width: 0.85,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: isDark
+                  ? (_hovered ? 0.28 : 0.18)
+                  : (_hovered ? 0.08 : 0.04),
             ),
-            child: ClipRRect(
-              borderRadius: radius,
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: isSort
-                      ? null
-                      : enableMultiSelect
-                      ? () => ctr!.onSelect(item)
-                      : _onTap,
-                  onLongPress: onLongPress,
-                  onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AspectRatio(
-                          aspectRatio: Style.aspectRatio,
-                          child: LayoutBuilder(
-                            builder: (context, boxConstraints) {
-                              double maxWidth = boxConstraints.maxWidth;
-                              double maxHeight = boxConstraints.maxHeight;
-                              return Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  NetworkImgLayer(
-                                    src: item.cover,
-                                    width: maxWidth,
-                                    height: maxHeight,
-                                  ),
-                                  PBadge(
-                                    text: DurationUtils.formatDuration(
-                                      item.duration,
-                                    ),
-                                    right: 6.0,
-                                    bottom: 6.0,
-                                    type: PBadgeType.gray,
-                                  ),
-                                  if (item.type == 12)
-                                    const PBadge(
-                                      text: '音频',
-                                      top: 6.0,
-                                      right: 6.0,
-                                      type: PBadgeType.gray,
-                                    )
-                                  else
-                                    PBadge(
-                                      text: item.ogv?.typeName,
-                                      top: 6.0,
-                                      right: 6.0,
-                                      bottom: null,
-                                      left: null,
-                                    ),
-                                  if (!isSort)
-                                    Positioned.fill(
-                                      child: selectMask(
-                                        colorScheme,
-                                        item.checked,
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        content(context, colorScheme, isOwner),
-                      ],
+            blurRadius: _hovered ? 14 : 9,
+            offset: Offset(0, _hovered ? 5 : 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: isSort
+                ? null
+                : enableMultiSelect
+                ? () => ctr!.onSelect(item)
+                : () => _onTap(context),
+            onLongPress: onLongPress,
+            onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AspectRatio(
+                    aspectRatio: Style.aspectRatio,
+                    child: LayoutBuilder(
+                      builder: (context, boxConstraints) {
+                        double maxWidth = boxConstraints.maxWidth;
+                        double maxHeight = boxConstraints.maxHeight;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            NetworkImgLayer(
+                              src: item.cover,
+                              width: maxWidth,
+                              height: maxHeight,
+                            ),
+                            PBadge(
+                              text: DurationUtils.formatDuration(
+                                item.duration,
+                              ),
+                              right: 6.0,
+                              bottom: 6.0,
+                              type: PBadgeType.gray,
+                            ),
+                            if (item.type == 12)
+                              const PBadge(
+                                text: '音频',
+                                top: 6.0,
+                                right: 6.0,
+                                type: PBadgeType.gray,
+                              )
+                            else
+                              PBadge(
+                                text: item.ogv?.typeName,
+                                top: 6.0,
+                                right: 6.0,
+                                bottom: null,
+                                left: null,
+                              ),
+                            if (!isSort)
+                              Positioned.fill(
+                                child: selectMask(
+                                  colorScheme,
+                                  item.checked,
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  content(context, colorScheme, isOwner),
+                ],
               ),
             ),
           ),
