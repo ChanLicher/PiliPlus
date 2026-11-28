@@ -1,4 +1,6 @@
 import 'package:PiliPlus/common/widgets/video_card/card_enter_motion.dart';
+import 'package:PiliPlus/common/widgets/video_card/video_card_transition.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/models/common/badge_type.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
@@ -37,9 +39,37 @@ class VideoCardH extends StatefulWidget {
 class _VideoCardHState extends State<VideoCardH> {
   final ValueNotifier<bool> _hovered = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _pressed = ValueNotifier<bool>(false);
+  final GlobalKey _cardKey = GlobalKey();
+  bool _pushing = false;
+
+  bool get _isNormalVideo =>
+      widget.onTap == null &&
+      !(widget.videoItem.isPugv ?? false) &&
+      !(widget.videoItem.isLive ?? false) &&
+      widget.videoItem.redirectUrl?.isNotEmpty != true;
+
+  String get _heroTag =>
+      'video_h_${identityHashCode(this)}_${widget.videoItem.bvid ?? widget.videoItem.aid}';
+
+  Future<void> _onTapDefault(BuildContext context) async {
+    if (_pushing) return;
+    _pushing = true;
+    try {
+      await pushVideoH(
+        widget.videoItem,
+        heroTag: _isNormalVideo ? _heroTag : null,
+        context: _isNormalVideo ? (_cardKey.currentContext ?? context) : null,
+      );
+    } finally {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _pushing = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
+    clearPendingVideoCardTransition(_heroTag);
     _hovered.dispose();
     _pressed.dispose();
     super.dispose();
@@ -57,6 +87,9 @@ class _VideoCardHState extends State<VideoCardH> {
     final isDark = theme.brightness == Brightness.dark;
     final videoItem = widget.videoItem;
     const radius = BorderRadius.all(Radius.circular(14));
+    final cardSurface = isDark
+        ? const Color(0xFF1A1B1F)
+        : const Color(0xFFFFFFFF);
 
     return CardEnterMotion(
       itemKey: videoItem.bvid ?? videoItem.aid,
@@ -66,8 +99,14 @@ class _VideoCardHState extends State<VideoCardH> {
           vertical: 3,
         ),
         child: MouseRegion(
-          onEnter: (_) => _hovered.value = true,
-          onExit: (_) => _hovered.value = false,
+          onHover: (e) {
+            if (e.kind == PointerDeviceKind.mouse && !_hovered.value) {
+              _hovered.value = true;
+            }
+          },
+          onExit: (_) {
+            if (_hovered.value) _hovered.value = false;
+          },
           child: ValueListenableBuilder<bool>(
             valueListenable: _hovered,
             builder: (context, hovered, child) {
@@ -81,40 +120,81 @@ class _VideoCardHState extends State<VideoCardH> {
                     scale: scale,
                     duration: const Duration(milliseconds: 150),
                     curve: const Cubic(0.2, 0, 0, 1),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(
-                                  alpha: hovered ? 0.085 : 0.055,
-                                )
-                              : Colors.white.withValues(
-                                  alpha: hovered ? 0.96 : 0.82,
+                    child: _isNormalVideo
+                        ? VideoCardHero(
+                            key: _cardKey,
+                            tag: _heroTag,
+                            surfaceColor: cardSurface,
+                            cornerRadius: 14,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(
+                                        alpha: hovered ? 0.085 : 0.055,
+                                      )
+                                    : Colors.white.withValues(
+                                        alpha: hovered ? 0.96 : 0.82,
+                                      ),
+                                borderRadius: radius,
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withValues(
+                                          alpha: hovered ? 0.16 : 0.09,
+                                        )
+                                      : Colors.white.withValues(
+                                          alpha: hovered ? 0.98 : 0.88,
+                                        ),
+                                  width: 0.8,
                                 ),
-                          borderRadius: radius,
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(
-                                    alpha: hovered ? 0.16 : 0.09,
-                                  )
-                                : Colors.white.withValues(
-                                    alpha: hovered ? 0.98 : 0.88,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: isDark
+                                          ? (hovered ? 0.28 : 0.16)
+                                          : (hovered ? 0.085 : 0.04),
+                                    ),
+                                    blurRadius: hovered ? 16 : 10,
+                                    offset: Offset(0, hovered ? 5 : 3),
                                   ),
-                            width: 0.8,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: isDark
-                                    ? (hovered ? 0.28 : 0.16)
-                                    : (hovered ? 0.085 : 0.04),
+                                ],
                               ),
-                              blurRadius: hovered ? 16 : 10,
-                              offset: Offset(0, hovered ? 5 : 3),
+                              child: child,
                             ),
-                          ],
-                        ),
-                        child: child,
-                      ),
+                          )
+                        : DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(
+                                      alpha: hovered ? 0.085 : 0.055,
+                                    )
+                                  : Colors.white.withValues(
+                                      alpha: hovered ? 0.96 : 0.82,
+                                    ),
+                              borderRadius: radius,
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.white.withValues(
+                                        alpha: hovered ? 0.16 : 0.09,
+                                      )
+                                    : Colors.white.withValues(
+                                        alpha: hovered ? 0.98 : 0.88,
+                                      ),
+                                width: 0.8,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: isDark
+                                        ? (hovered ? 0.28 : 0.16)
+                                        : (hovered ? 0.085 : 0.04),
+                                  ),
+                                  blurRadius: hovered ? 16 : 10,
+                                  offset: Offset(0, hovered ? 5 : 3),
+                                ),
+                              ],
+                            ),
+                            child: child,
+                          ),
                     );
                   },
                 );
@@ -134,7 +214,7 @@ class _VideoCardHState extends State<VideoCardH> {
                         onSecondaryTap: PlatformUtils.isMobile
                             ? null
                             : onLongPress,
-                        onTap: widget.onTap ?? () => pushVideoH(videoItem),
+                        onTap: widget.onTap ?? () => _onTapDefault(context),
                         child: Padding(
                           padding: const .symmetric(
                             horizontal: 6,
@@ -358,7 +438,11 @@ class _CoverBuilderHState extends State<_CoverBuilderH> {
   }
 }
 
-Future<void> pushVideoH(HorizontalVideoModel videoItem) async {
+Future<void> pushVideoH(
+  HorizontalVideoModel videoItem, {
+  String? heroTag,
+  BuildContext? context,
+}) async {
   if (videoItem.isPugv ?? false) {
     PageUtils.viewPugv(seasonId: videoItem.seasonId);
     return;
@@ -374,6 +458,14 @@ Future<void> pushVideoH(HorizontalVideoModel videoItem) async {
   if (videoItem.redirectUrl?.isNotEmpty == true &&
       PageUtils.viewPgcFromUri(videoItem.redirectUrl!)) {
     return;
+  }
+
+  final useHero =
+      heroTag != null &&
+      context != null &&
+      !isVideoPageTransitionActive(heroTag);
+  if (useHero) {
+    prepareVideoCardTransition(heroTag, context);
   }
 
   int? cid = videoItem.cid;
@@ -395,6 +487,7 @@ Future<void> pushVideoH(HorizontalVideoModel videoItem) async {
       cover: videoItem.cover,
       title: videoItem.title,
       dimension: dimension,
+      heroTag: useHero ? heroTag : null,
     );
   }
 }
